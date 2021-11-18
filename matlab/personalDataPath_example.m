@@ -12,6 +12,7 @@ if ~isempty(varargin{1})
             if contains(varargin{1}.folderinput,'chronic_ECoG')
                 % RESPect database
                 localDataPath.CCEPpath = 'blabla/derivatives/CCEP/';
+                localDataPath.CCEPpath2 = 'blabla/derivatives/CCEP/'; % second observer
                 localDataPath.dataPath = '/blabla/chronic_ECoG/';
             end
         end
