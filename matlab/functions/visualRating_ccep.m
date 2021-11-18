@@ -197,6 +197,15 @@ for stimp = endstimp+1:size(dataBase(subj).metadata(run).cc_epoch_sorted_avg,2)
                     ccep.checked(chan,stimp) = 0 ;
                 end
             end
+            %show the scoring of another scorer
+%             ccep_scorer2= load(fullfile(myDataPath.CCEPpath2, ...
+%             dataBase(subj).sub_label,dataBase(subj).ses_label, dataBase(subj).metadata(run).run_label,...
+%             [dataBase(subj).sub_label, '_', dataBase(subj).ses_label,'_',...
+%             dataBase(subj).metadata(run).task_label,'_',...
+%             dataBase(subj).metadata(run).run_label,'_N1sChecked.mat']));
+%             checked_scorer2=ccep_scorer2.checked(chan,stimp);
+%             checked_scorer2_str=strrep(strrep(sprintf('%d ', checked_scorer2), '1', 'Yes'), '0', 'No');
+%             uiwait(msgbox({'CCEP according to other scorer?:' ,'',sprintf('%s',checked_scorer2_str)},'','help'));
             close(H)
         else
             %             ccep.checked(chan,stimp) = NaN;
