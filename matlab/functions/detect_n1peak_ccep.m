@@ -72,6 +72,8 @@ amplitude_thresh = cfg.amplitude_thresh;
 n1_peak_range = cfg.n1_peak_range;
 epoch_prestim = cfg.epoch_prestim;
 epoch_length = cfg.epoch_length;
+minSD = cfg.minSD;
+sel = cfg.sel;
 
 %% Script
 % iterate over all subjects in database
@@ -118,8 +120,8 @@ for subj = 1:length(dataBase)
                 
                 % if the pre_stim_sd is smaller that the minimally needed SD, 
                 % which is validated as 50 uV, use this the minSD as pre_stim_sd
-                if pre_stim_sd < 50
-                    pre_stim_sd = 50;
+                if pre_stim_sd < minSD
+                    pre_stim_sd = minSD;
                 end
 
                 % when the electrode is stimulated
@@ -142,16 +144,23 @@ for subj = 1:length(dataBase)
                     % As tt use first sample after timepoint 0  
                     % till first sample after 0,5 seconds (rougly 1000 samples)
                     % sel = 20 , which is how many samples around a peak not considered as another peak
-                    [all_sampneg, all_amplneg] = peakfinder(new_signal(find(tt>0,1):find(tt>0.5,1)),20,[],-1);
+                    [all_sampneg, all_amplneg] = peakfinder(new_signal(find(tt>0,1):find(tt>0.5,1)),sel,[],-1); 
+                    [all_samppos, all_amplpos] = peakfinder(new_signal(find(tt>0,1):find(tt>0.5,1)),sel,[],1); 
+
+                    % merge the pos and neg samples
+                    all_samp = [all_sampneg; all_samppos];
+                    [all_samp,samp_sort] = sort(all_samp);
+                    all_ampl = [all_amplneg; all_amplpos];
+                    all_ampl = all_ampl(samp_sort);
 
                     % If the first selected sample is a peak, this is not a real peak,
                     % so delete
-                    all_amplneg(all_sampneg==1) = [];
-                    all_sampneg(all_sampneg==1) = [];
-
+                    all_ampl(all_samp==1) = [];
+                    all_samp(all_samp==1) = [];
+                 
                     % convert back timepoints based on tt, substract 1 because before
                     % the first sample after stimulation is taken
-                    all_sampneg = all_sampneg + find(tt>0,1) - 1;
+                    all_samp = all_samp + find(tt>0,1) - 1;
 
                     % set the starting range in which the algorithm looks
                     % for a peak. At least 18 samples are necessary because
@@ -167,8 +176,8 @@ for subj = 1:length(dataBase)
                     
                     % for N1, first select the range in which the N1 could appear, and
                     % select the peaks found in this range
-                    temp_n1_peaks_samp = all_sampneg((n1_samples_start <= all_sampneg) & (all_sampneg <= n1_samples_end));
-                    temp_n1_peaks_ampl = all_amplneg((n1_samples_start <= all_sampneg) & (all_sampneg <= n1_samples_end));
+                    temp_n1_peaks_samp = all_samp((n1_samples_start <= all_samp) & (all_samp <= n1_samples_end));
+                    temp_n1_peaks_ampl = all_ampl((n1_samples_start <= all_samp) & (all_samp <= n1_samples_end));
 
                     % if peak(s) found, select biggest peak
                     if ~isempty(temp_n1_peaks_samp)
