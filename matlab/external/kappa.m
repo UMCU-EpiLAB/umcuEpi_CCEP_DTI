@@ -1,4 +1,4 @@
-function kappa(x,varargin)
+function [k]=kappa(x,varargin)
 % KAPPA: This function computes the Cohen's kappa coefficient.
 % Cohen's kappa coefficient is a statistical measure of inter-rater
 % reliability. It is generally thought to be a more robust measure than
