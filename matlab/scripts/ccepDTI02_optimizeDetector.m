@@ -87,7 +87,6 @@ else
 end
 
 %% kappa score
-dataBase_optimal=dataBase_visualScores;
 % pre-allocation
 TP = NaN(1); % true positives
 FN = NaN(1); % false negatives
@@ -105,7 +104,6 @@ kappa_score = NaN(1); % Cohen's kappa
             TN(subj,run) = numel(find( scored2 == 0 & scored == 0));
             kappa_score(subj,run) = (2*(TP(subj,run)*TN(subj,run)-FN(subj,run)*FP(subj,run)))...
                 /((TP(subj,run)+FP(subj,run))*(FP(subj,run)+TN(subj,run))+(TP(subj,run)+FN(subj,run))*(FN(subj,run)+TN(subj,run))) ;
-            dataBase_optimal(subj).metadata(run).kappa_score = kappa_score(subj,run);
         end
     end
 % with the external function kappa
@@ -121,8 +119,7 @@ kappa_score2 = NaN(1); % Cohen's kappa via function
             TN(subj,run) = numel(find( scored2 == 0 & scored == 0));
             confusion_matrix = [TP(subj,run),FP(subj,run);FN(subj,run),TN(subj,run)];
             kappa_score2(subj,run) = kappa(confusion_matrix);
-            dataBase_optimal(subj).metadata(run).kappa_score2 = kappa_score2(subj,run);
-            clear('confusion matrix');
+            clear('confusion_matrix');
         end
     end
 %% merge scores of two scorers
@@ -136,24 +133,22 @@ kappa_score2 = NaN(1); % Cohen's kappa via function
             for indx=1:length(ccep_row)
             agreed_cceps(ccep_row(indx),ccep_col(indx)) = 1;
             end
-            dataBase_optimal(subj).metadata(run).visual_scored = agreed_cceps; 
+            dataBase_visualScores(subj).metadata(run).visual_scored = agreed_cceps;
         end
     end
+clear('agreed_cceps');
+clear('ccep_row');
+clear('ccep_col');
+clear('indx');
+clear('scored');
+clear('scored2');
+clear('dataBase_visualScores2');
 %% optimize detector
-
 % for cECoG data, these are the best parameters:
 cfg.amplitude_thresh = 2.6;
 cfg.n1_peak_range = 100;
 cfg.minSD = 50;
 cfg.sel = 20;
-
-
-% let's find out what are the best parameters for sEEG data
-% next to the amplitude_threshold, you might want to optimize pre_stim_sd
-% (line121), and sel (line 145).
-% and now, only the negative peaks are taken into account, but I think,
-% since sEEG is stimulated differently, that you might want to take both
-% negative and positive peaks into account (in peakfinder, line 145). 
 
 n=1;
 % pre-allocation
@@ -161,11 +156,11 @@ TP = NaN(1); % true positives
 FN = NaN(1); % false negatives
 FP = NaN(1); % false positives
 TN = NaN(1); % true negatives
-%combination = NaN(1); % combination of parameters
+%combination = NaN(1); % combination of parameters. dit geeft een error
 
-for sd = 35:1:45
+for sd = 10:2:50
 for sl = 10:1:20
-for amplTh = 1.5:0.1:2.5 % vary amplitude threshold 0.5
+for amplTh = 1.5:0.1:2.5 
     cfg.amplitude_thresh = amplTh;
     cfg.minSD = sd;
     cfg.sel = sl;
@@ -173,16 +168,15 @@ for amplTh = 1.5:0.1:2.5 % vary amplitude threshold 0.5
     combination(n,:) = [amplTh sd sl]; % combination(n= number combination, parameter) parameter 1= amplitude_thresh; 2=minSD; 3=sel
     for subj = 1:size(dataBase,2)
         for run = 1:size(dataBase(subj).metadata,2)
-            detected = dataBase(subj).metadata(run).ccep.n1_peak_sample; %nan als geen peak gevonden, dan dus 0
+            detected = dataBase(subj).metadata(run).ccep.n1_peak_sample; 
             detected(~isnan(detected)) = 1;
             detected(isnan(detected)) = 0;
-            scored = dataBase_optimal(subj).metadata(run).visual_scored;
+            scored = dataBase_visualScores(subj).metadata(run).visual_scored;
 
-            TP(subj,run,n) = numel(find( scored == 1 & detected == 1)); % change into dataBase_optimal(subj).metadata(run).
+            TP(subj,run,n) = numel(find( scored == 1 & detected == 1)); 
             FN(subj,run,n) = numel(find( scored == 1 & detected == 0));
             FP(subj,run,n) = numel(find( scored == 0 & detected == 1));
             TN(subj,run,n) = numel(find( scored == 0 & detected == 0));
-            dataBase_optimal(subj).metadata(run).TP = TP(subj,run,n);
         end
     end
     n=n+1;
@@ -192,12 +186,7 @@ end
 end
 
 %% calculate and visualize performance for each setting
-
-% doe je elke keer een waarde veranderen en de anderen stil? nee alle
-% tegelijk
-% combine here the performances of each subj and run.
-% sensitivity, specificity, positive predictive value (PPV) and negative
-% predictive value (NPV)
+% combine the performances of each subj and run.
 TP_all = NaN(1);
 FN_all = NaN(1);
 FP_all = NaN(1);
@@ -210,28 +199,56 @@ d_roc = NaN(1); % distance to top left corner of ROC
 d_prc = NaN(1); % distance to top left corner of PRC (precision-recall curve)
 
         for n = 1:length(combination)
-        TP_all(n) = sum(nonzeros(TP(:,:,n)))';
-        FN_all(n) = sum(nonzeros(FN(:,:,n)))';
-        FP_all(n) = sum(nonzeros(FP(:,:,n)))';
-        TN_all(n) = sum(nonzeros(TN(:,:,n)))';
-        spec(n) = TN_all(n)/(TN_all(n)+FP_all(n));
-        sens(n) = TP_all(n)/(TP_all(n)+FN_all(n));
-        ppv(n) = TP_all(n)/(TP_all(n)+FP_all(n));
-        npv(n) = TN_all(n)/(TN_all(n)+FN_all(n));
-        d_roc(n) = sqrt((1-sens(n))^2+ (1-spec(n))^2);
-        d_prc(n) = sqrt((1-sens(n))^2+ (1-ppv(n))^2);       
+        TP_all(n,1) = (sum(nonzeros(TP(:,:,n))));
+        FN_all(n,1) = sum(nonzeros(FN(:,:,n)));
+        FP_all(n,1) = sum(nonzeros(FP(:,:,n)));
+        TN_all(n,1) = sum(nonzeros(TN(:,:,n)));
+        spec(n,1) = TN_all(n)/(TN_all(n)+FP_all(n));
+        sens(n,1) = TP_all(n)/(TP_all(n)+FN_all(n));
+        ppv(n,1) = TP_all(n)/(TP_all(n)+FP_all(n));
+        npv(n,1) = TN_all(n)/(TN_all(n)+FN_all(n));
+        d_roc(n,1) = sqrt((1-sens(n))^2+ (1-spec(n))^2);
+        d_prc(n,1) = sqrt((1-sens(n))^2+ (1-ppv(n))^2);       
         end
-%% best combination
-[value, i] = min(d_prc);
-best_comb = i;
-best_amplTh = combination(i,1);
-best_minSD = combination(i,2);
-best_sel = combination(i,3);
-%% plot ROC and PRC
+
+% analyze the performances per subject
+TP_subj = NaN(1);
+FN_subj = NaN(1);
+FP_subj = NaN(1);
+TN_subj = NaN(1);
+spec_subj = NaN(1); % specificity
+sens_subj = NaN(1); % sensitivity
+ppv_subj = NaN(1); % positive predictive value
+npv_subj = NaN(1); % negative predicitive value
+d_roc_subj = NaN(1); % distance to top left corner of ROC 
+d_prc_subj = NaN(1); % distance to top left corner of PRC (precision-recall curve
+
+ for subj = 1:size(dataBase,2)
+       for n = 1:length(combination)
+        TP_subj(n,subj) = sum(nonzeros(TP(subj,:,n)));
+        FN_subj(n,subj) = sum(nonzeros(FN(subj,:,n)));
+        FP_subj(n,subj) = sum(nonzeros(FP(subj,:,n)));
+        TN_subj(n,subj) = sum(nonzeros(TN(subj,:,n)));
+        spec_subj(n,subj) = TN_subj(n,subj)/(TN_subj(n,subj)+FP_subj(n,subj));
+        sens_subj(n,subj) = TP_subj(n,subj)/(TP_subj(n,subj)+FN_subj(n,subj));
+        ppv_subj(n,subj) = TP_subj(n,subj)/(TP_subj(n,subj)+FP_subj(n,subj));
+        npv_subj(n,subj) = TN_subj(n,subj)/(TN_subj(n,subj)+FN_subj(n,subj));
+        d_roc_subj(n,subj) = sqrt((1-sens_subj(n,subj))^2+ (1-spec_subj(n,subj))^2);
+        d_prc_subj(n,subj) = sqrt((1-sens_subj(n,subj))^2+ (1-ppv_subj(n,subj))^2);     
+       end
+ end
+
+% best combination for this run
+[value, best_comb] = min(d_prc);
+best_amplTh = combination(best_comb,1);
+best_minSD = combination(best_comb,2);
+best_sel = combination(best_comb,3);
+
+% plot ROC and PRC
 f1 = figure(1);
 scatter(1-spec,sens, 30, [0 0.4470 0.7410], '.')
 hold on
-scatter(1-spec(i), sens(i), 50, [0.8500 0.3250 0.0980],'filled')
+scatter(1-spec(best_comb), sens(best_comb), 50, [0.8500 0.3250 0.0980],'filled')
 title('ROC curve')
 xlabel(' 1-specificity')
 ylabel(' sensitivity')
@@ -240,12 +257,12 @@ ylim([0,1])
 ticks = 0:0.1:1;
 set(gca, 'YTick',ticks, 'XTick', ticks);
 box on
-print(f1,'-dpng', 'ROC','-r300')
+print(f1,'-dpng', 'ROC_2','-r300')
 
 f2 = figure(2);
 scatter(sens,ppv, 30, [0 0.4470 0.7410], '.')
 hold on
-scatter(sens(i), ppv(i), 50, [0.8500 0.3250 0.0980], 'filled')
+scatter(sens(best_comb), ppv(best_comb), 50, [0.8500 0.3250 0.0980], 'filled')
 title('Precision-recall curve')
 xlabel('sensitivity')
 ylabel('positive predictive value')
@@ -253,7 +270,35 @@ xlim([0,1])
 ylim([0,1])
 set(gca, 'YTick',ticks, 'XTick', ticks);
 box on
-print(f2,'-dpng', 'PRC','-r300')
+print(f2,'-dpng', 'PRC_2','-r300')
+
+%% show falsely detected cceps
+% plot false positives 
+cfg.amplitude_thresh = best_amplTh;
+cfg.minSD = best_minSD;
+cfg.sel = best_sel;
+dataBase = detect_n1peak_ccep(dataBase, cfg);
+for subj = 1:size(dataBase,2)
+    for run = 1:size(dataBase(subj).metadata,2)
+            detected = dataBase(subj).metadata(run).ccep.n1_peak_sample; 
+            detected(~isnan(detected)) = 1;
+            detected(isnan(detected)) = 0;
+            scored = dataBase_visualScores(subj).metadata(run).visual_scored;
+            [FP_chan,FP_stimp]= find( scored == 0 & detected == 1);
+            show_ccep(dataBase,FP_stimp,FP_chan,subj,run,cfg)
+    end
+end
+% plot false negatives
+for subj = 1:size(dataBase,2)
+    for run = 1:size(dataBase(subj).metadata,2)
+            detected = dataBase(subj).metadata(run).ccep.n1_peak_sample; 
+            detected(~isnan(detected)) = 1;
+            detected(isnan(detected)) = 0;
+            scored = dataBase_visualScores(subj).metadata(run).visual_scored;
+            [FN_chan,FN_stimp]= find( scored == 1 & detected == 0); 
+            show_ccep(dataBase,FN_stimp,FN_chan,subj,run,cfg)
+    end
+end
 
 %% determine optimal settings
 
