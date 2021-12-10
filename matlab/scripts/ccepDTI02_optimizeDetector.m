@@ -158,9 +158,9 @@ FP = NaN(1); % false positives
 TN = NaN(1); % true negatives
 %combination = NaN(1); % combination of parameters. dit geeft een error
 
-for sd = 10:2:50
-for sl = 10:1:20
-for amplTh = 1.5:0.1:2.5 
+for sd = 0:10:100 %10:1:50
+for sl = 10:10:200 %10:1:20
+for amplTh = 0.5:0.5:15 %1.5:0.1:2.5 
     cfg.amplitude_thresh = amplTh;
     cfg.minSD = sd;
     cfg.sel = sl;
@@ -257,7 +257,7 @@ ylim([0,1])
 ticks = 0:0.1:1;
 set(gca, 'YTick',ticks, 'XTick', ticks);
 box on
-print(f1,'-dpng', 'ROC_2','-r300')
+print(f1,'-dpng', 'ROC_5','-r300')
 
 f2 = figure(2);
 scatter(sens,ppv, 30, [0 0.4470 0.7410], '.')
@@ -270,14 +270,30 @@ xlim([0,1])
 ylim([0,1])
 set(gca, 'YTick',ticks, 'XTick', ticks);
 box on
-print(f2,'-dpng', 'PRC_2','-r300')
-
+print(f2,'-dpng', 'PRC_5','-r300')
+%% overview of performance values of best combination for this run
+matrix = zeros(6,4);
+matrix(1,2:4) = spec_subj(best_comb,:);
+matrix(2,2:4) =  sens_subj(best_comb,:);
+matrix(3,2:4) =  ppv_subj(best_comb,:);
+matrix(4,2:4) =  npv_subj(best_comb,:);
+matrix(5,2:4) =  d_roc_subj(best_comb,:);
+matrix(6,2:4) =  d_prc_subj(best_comb,:);
+matrix(1,1) = spec(best_comb,:);
+matrix(2,1) =  sens(best_comb,:);
+matrix(3,1) =  ppv(best_comb,:);
+matrix(4,1) =  npv(best_comb,:);
+matrix(5,1) =  d_roc(best_comb,:);
+matrix(6,1) =  d_prc(best_comb,:);
+matrix = matrix.*100;
+matrix = round(matrix);
 %% show falsely detected cceps
 % plot false positives 
 cfg.amplitude_thresh = best_amplTh;
 cfg.minSD = best_minSD;
 cfg.sel = best_sel;
 dataBase = detect_n1peak_ccep(dataBase, cfg);
+per_CCEP_FP = NaN(1); % percentage of the FP wich is by second observation TP
 for subj = 1:size(dataBase,2)
     for run = 1:size(dataBase(subj).metadata,2)
             detected = dataBase(subj).metadata(run).ccep.n1_peak_sample; 
@@ -285,10 +301,15 @@ for subj = 1:size(dataBase,2)
             detected(isnan(detected)) = 0;
             scored = dataBase_visualScores(subj).metadata(run).visual_scored;
             [FP_chan,FP_stimp]= find( scored == 0 & detected == 1);
-            show_ccep(dataBase,FP_stimp,FP_chan,subj,run,cfg)
+            data_FP = show_ccep(dataBase,FP_stimp,FP_chan,subj,run,cfg);
+            dataBase(subj).metadata(run).ccep.n1_peak_sample_FP = data_FP;
+            per_CCEP_FP(subj,run) = sum(data_FP(:)==1)/length(FP_chan)*100;
+            clear('data_FP')
     end
 end
+%%
 % plot false negatives
+per_CCEP_FN = NaN(1); % percentage of the FN wich is by second observation TN
 for subj = 1:size(dataBase,2)
     for run = 1:size(dataBase(subj).metadata,2)
             detected = dataBase(subj).metadata(run).ccep.n1_peak_sample; 
@@ -296,10 +317,12 @@ for subj = 1:size(dataBase,2)
             detected(isnan(detected)) = 0;
             scored = dataBase_visualScores(subj).metadata(run).visual_scored;
             [FN_chan,FN_stimp]= find( scored == 1 & detected == 0); 
-            show_ccep(dataBase,FN_stimp,FN_chan,subj,run,cfg)
+            data_FN = show_ccep(dataBase,FN_stimp,FN_chan,subj,run,cfg);
+            dataBase(subj).metadata(run).ccep.n1_peak_sample_FN = data_FN;
+            per_CCEP_FN(subj,run) = (1-sum(data_FN(:)==1)/length(FN_chan))*100;
+            clear('data_FN')
     end
 end
-
 %% determine optimal settings
 
 
