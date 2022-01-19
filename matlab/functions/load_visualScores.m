@@ -1,25 +1,25 @@
-% function to read data into dataBase
-% author: Dorien van Blooijs
-% date: June 2019
-% Hier maak ik een functie de de gescoorde datasets inlaad voor beide
-% scorers
+% function to read scored data into dataBase
+% author: Susanne Jelsma 
+% date: November 2021
 
-function dataBase = load_visualScores(myDataPath,cfg, scorer)
 
-if scorer==1
-dataPath = myDataPath.CCEPpath; % CCEPpath2 is other scorer maak dit nog eleganter
-else 
-dataPath = myDataPath.CCEPpath2;
+function dataBase = load_visualScores(myDataPath,cfg)
+
+dataPath = myDataPath.CCEPpath; 
+if isfield(myDataPath,'CCEPpath2')
+dataPath2 = myDataPath.CCEPpath2;
+else
+error('myDataPath.CCEPpath2 does not exist. Make sure you add this folder for a second observer in personalDataPath.m');
 end
 
 dataBase = struct([]);
 
-for i=1:size(cfg.sub_label,2)
-    if isfield(cfg,'sub_label')
-        sub_label = ['sub-' cfg.sub_label{i}];
-    else
+if isfield(cfg,'sub_label')==0
         error('No sub-label specified');
-    end
+end
+
+for i=1:size(cfg.sub_label,2)
+    sub_label = ['sub-' cfg.sub_label{i}];
     if isfield(cfg,'ses_label')
         ses_label = cfg.ses_label{i};
     else
@@ -46,15 +46,24 @@ for i=1:size(cfg.sub_label,2)
     for j=1:size(run_label,2)
         D = dir(fullfile(dataPath,sub_label,ses_label,run_label{j},...
             [sub_label, '_', ses_label,'_',task_label,'_',run_label{j},'_N1sChecked.mat']));
+        D2 = dir(fullfile(dataPath2,sub_label,ses_label,run_label{j},...
+            [sub_label, '_', ses_label,'_',task_label,'_',run_label{j},'_N1sChecked.mat']));
       
         if size(D,1) == 0
             error('%s does not exist',fullfile(dataPath,sub_label,ses_label,run_label{j},...
             [sub_label, '_', ses_label,'_',task_label,'_',run_label{j},'_N1sChecked.mat']));
         end  
+
+        if size(D2,1) == 0
+            error('%s does not exist',fullfile(dataPath2,sub_label,ses_label,run_label{j},...
+            [sub_label, '_', ses_label,'_',task_label,'_',run_label{j},'_N1sChecked.mat']));
+        end  
         
         dataName = fullfile(D(1).folder, D(1).name);
+        dataName2 = fullfile(D2(1).folder, D2(1).name);
         
-        data= load(dataName);   
+        data= load(dataName);
+        data2= load(dataName2);   
         
         dataBase(i).sub_label = sub_label;
         dataBase(i).ses_label = ses_label;
@@ -62,8 +71,14 @@ for i=1:size(cfg.sub_label,2)
         dataBase(i).metadata(j).run_label = run_label{j};
         dataBase(i).metadata(j).dataName = dataName;
         dataBase(i).metadata(j).ccep = data;
+        dataBase(i).metadata(j).ccep2 = data2;
         fprintf('...Subject %s %s has been run...\n',sub_label,run_label{j})
     end
 end
+fprintf('All subjects from %s are loaded\n', dataPath)
+fprintf('All subjects from %s are loaded\n', dataPath2)
 
-disp('All subjects are loaded')
+%je zou hier nog aan toe kunnen voegen uit welke file je deze info hebt gehaald, z
+% odat duidelijk is in je command window wie observer 1 en wie observer 2 is.
+end
+
