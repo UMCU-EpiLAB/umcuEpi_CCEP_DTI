@@ -3,7 +3,7 @@
 % date: November 2021
 
 
-function dataBase = load_visualScores(myDataPath,cfg)
+function dataBase = load_visualScores(dataBase, myDataPath,cfg)
 
 dataPath = myDataPath.CCEPpath; 
 if isfield(myDataPath,'CCEPpath2')
@@ -12,13 +12,15 @@ else
 error('myDataPath.CCEPpath2 does not exist. Make sure you add this folder for a second observer in personalDataPath.m');
 end
 
-dataBase = struct([]);
-
+%dataBase = struct([]);
+% van hier tot line 44 de alerts miss niet nodig aangezien dat ook al in de
+% load_ECoGdata zit, wat voor deze wordt gerund in
+% ccepDTI02_optimizeDetector.
 if isfield(cfg,'sub_label')==0
         error('No sub-label specified');
 end
 
-for i=1:size(cfg.sub_label,2)
+ for i=1:size(cfg.sub_label,2)
     sub_label = ['sub-' cfg.sub_label{i}];
     if isfield(cfg,'ses_label')
         ses_label = cfg.ses_label{i};
@@ -65,13 +67,13 @@ for i=1:size(cfg.sub_label,2)
         data= load(dataName);
         data2= load(dataName2);   
         
-        dataBase(i).sub_label = sub_label;
-        dataBase(i).ses_label = ses_label;
-        dataBase(i).metadata(j).task_label = task_label;
-        dataBase(i).metadata(j).run_label = run_label{j};
-        dataBase(i).metadata(j).dataName = dataName;
-        dataBase(i).metadata(j).ccep = data;
-        dataBase(i).metadata(j).ccep2 = data2;
+%         dataBase(i).sub_label = sub_label;
+%         dataBase(i).ses_label = ses_label;
+%         dataBase(i).metadata(j).task_label = task_label;
+%         dataBase(i).metadata(j).run_label = run_label{j};
+        dataBase(i).metadata(j).dataName_VisualScores = dataName;
+        dataBase(i).metadata(j).ccep_VS1 = data;
+        dataBase(i).metadata(j).ccep_VS2 = data2;
         fprintf('...Subject %s %s has been run...\n',sub_label,run_label{j})
     end
 end
