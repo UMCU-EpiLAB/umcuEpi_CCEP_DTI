@@ -221,14 +221,16 @@ for subj = 1:length(dataBase)
         dataBase(subj).metadata(run).ccep.n1_peak_amplitude = n1_peak(:,:,2);
         
         % baseline corrected signal
-        if strcmp(cfg.reref,'y')
-            dataBase(subj).metadata(run).cc_epoch_sorted_reref_avg = signal;
-        elseif strcmp(cfg.reref,'n')
-            dataBase(subj).metadata(run).cc_epoch_sorted_avg = signal;
-        end
+%         if strcmp(cfg.reref,'y')
+%             dataBase(subj).metadata(run).cc_epoch_sorted_reref_avg = signal;
+%         elseif strcmp(cfg.reref,'n')
+%             dataBase(subj).metadata(run).cc_epoch_sorted_avg = signal;
+%         end
         
         dataBase(subj).metadata(run).ccep.amplitude_thresh = cfg.amplitude_thresh;
         dataBase(subj).metadata(run).ccep.n1_peak_range = cfg.n1_peak_range;
+        dataBase(subj).metadata(run).ccep.minSD = cfg.minSD;
+        dataBase(subj).metadata(run).ccep.sel = cfg.sel;
 
     end
 end
