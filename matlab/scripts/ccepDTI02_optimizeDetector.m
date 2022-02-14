@@ -33,7 +33,7 @@ for subj=1:size(files1,1)
     sub_label1(1,subj)= cellstr(erase(files1(subj).name,'sub-'));
 end
 
-sub_label2 = cell(1,size(files1,1));
+sub_label2 = cell(1,size(files2,1));
 for subj=1:size(files2,1)
     sub_label2(1,subj)= cellstr(erase(files2(subj).name,'sub-'));
 end
@@ -48,7 +48,7 @@ for subj= 1:size(sub_label,2)
     end
 end
 
-clear sub_label sub_label1 sub_label2 files1 files2 i x
+clear sub_label sub_label1 sub_label2 files1 files2 i x subj
 
 cfg = selectPatients(cfg, myDataPath);
 
@@ -123,22 +123,28 @@ for subj= 1:size(dataBase,2)
             for run = 2:size(cfg.run_label{subj},2)
                 scored = dataBase(subj).metadata_runs(run).ccep_VS1.checked;
                 scored2 = dataBase(subj).metadata_runs(run).ccep_VS2.checked; 
+                data_sorted = dataBase(subj).metadata_runs(run).cc_epoch_sorted;
+                data_sorted_reref = dataBase(subj).metadata_runs(run).cc_epoch_sorted_reref;
                 data_sorted_avg = dataBase(subj).metadata_runs(run).cc_epoch_sorted_avg; 
                 data_sorted_reref_avg = dataBase(subj).metadata_runs(run).cc_epoch_sorted_reref_avg;
                 stimsets = dataBase(subj).metadata_runs(run).cc_stimsets;
-    
+                stimchannels = dataBase(subj).metadata_runs(run).cc_stimchans;
+                    
     
                 dataBase(subj).metadata.ccep_VS1.checked = [dataBase(subj).metadata.ccep_VS1.checked scored];
                 dataBase(subj).metadata.ccep_VS2.checked = [dataBase(subj).metadata.ccep_VS2.checked scored2];
                 dataBase(subj).metadata.cc_epoch_sorted_avg = [dataBase(subj).metadata.cc_epoch_sorted_avg data_sorted_avg];
                 dataBase(subj).metadata.cc_epoch_sorted_reref_avg = [dataBase(subj).metadata.cc_epoch_sorted_reref_avg data_sorted_reref_avg];
+                dataBase(subj).metadata.cc_epoch_sorted = cat(3,dataBase(subj).metadata.cc_epoch_sorted, data_sorted);
+                dataBase(subj).metadata.cc_epoch_sorted_reref = cat(3,dataBase(subj).metadata.cc_epoch_sorted_reref, data_sorted_reref);
                 dataBase(subj).metadata.cc_stimsets = [dataBase(subj).metadata.cc_stimsets;stimsets];
+                dataBase(subj).metadata.cc_stimchans = [dataBase(subj).metadata.cc_stimchans;stimchannels];
                 %voeg hier nog alle andere data die je gebruikt die per run
-                %verschilt toe!!!
+                %verschilt toe!!! vooral voor de rescore
             end
     end
 end
-clear data data_sorted_reref_avg data_sorted_avg run stimsets
+clear scored scored2 data data_sorted_reref_avg data_sorted_avg data_sorted data_sorted_reref run subj stimsets stimchannels 
 %% kappa score
 
 % pre-allocation
@@ -173,7 +179,7 @@ for subj = 1:size(dataBase,2)
     kappa_score2(subj) = kappa(confusion_matrix);
     clear('confusion_matrix');
 end
-clear subjs subj scored2 scored
+clear subjs subj scored2 scored TP FN FP TN
 %% merge scores of two scorers
 % only the scored CCEPs we both agreed on are officially visual scored
 for subj = 1:size(dataBase,2)
@@ -186,6 +192,78 @@ for subj = 1:size(dataBase,2)
 end
 
 clear scored_both scored scored2 subj
+
+%% rescore CCEP with no consensus
+
+subj=3;
+run=1;
+
+filefolder = fullfile(myDataPath.CCEPpath,dataBase(subj).sub_label,dataBase(subj).ses_label,dataBase(subj).metadata(run).run_label);
+if ~exist(filefolder,'dir')
+    mkdir(filefolder)
+end
+
+scored = dataBase(subj).metadata.ccep_VS1.checked;
+scored2 = dataBase(subj).metadata.ccep_VS2.checked;
+scored_both = scored + scored2;
+[RE_chan,RE_stimp] = find( scored_both == 1);
+
+cfg.n1Detected = 'n'; % --> if n1 peaks are detected
+rescored = dataBase(subj).metadata.visual_scored;
+
+
+for i = 1:length(RE_chan)
+    stimp = RE_stimp(i);
+    chan = RE_chan(i);
+    fs = dataBase(subj).metadata(run).ccep_header.Fs;
+    tt = -cfg.epoch_prestim+1/fs:1/fs:cfg.epoch_length-cfg.epoch_prestim;
+    
+    H = plot_ccep(dataBase,subj,run,cfg,tt,chan,stimp);
+    
+    perc = i / length(RE_chan) *100;
+    x = input(sprintf('%2.1f %% --- stimpair = %s-%s chan = %s --- Is this a CCEP? (y/n): ',...
+    perc,dataBase(subj).metadata(run).cc_stimchans{stimp,:},dataBase(subj).metadata(run).ch{chan}),'s');
+    % rescore the CCEPs
+    
+    if strcmp(x,'y') 
+    rescored(chan,stimp) = 1 ;
+    else
+    rescored(chan,stimp) = 0 ;
+    end
+    close(H)
+    clear('x')
+    % save also till which stimpair visual N1s are checked.
+    cfg.checkUntilStimp = stimp;
+    
+    filename = [dataBase(subj).sub_label,'_',dataBase(subj).ses_label,'_',dataBase(subj).metadata(run).task_label,'_',dataBase(subj).metadata(run).run_label,'_N1sREChecked.mat'];
+    
+    % save file during scoring in case of error
+    save(fullfile(filefolder,filename),'rescored');    
+end
+dataBase(subj).metadata.visual_scored = rescored;   
+fprintf('Rescore of %s completed\n',dataBase(subj).sub_label)
+
+% %%
+% clear filename filefolder rescored scored scored2 scored_both stimp subj tt run RE_chan RE_stimp x i H fs chan perc
+%% load rescored data for use again
+dataPath = myDataPath.CCEPpath; 
+for subj = 1:size(dataBase,2)
+    sub_label = ['sub-' cfg.sub_label{subj}];
+    ses_label = cfg.ses_label{subj};
+    task_label = cfg.task_label{subj};
+    run_label = cfg.run_label{subj}{1};
+    DRE = dir(fullfile(dataPath,sub_label,ses_label,run_label,...
+            [sub_label, '_', ses_label,'_',task_label,'_',run_label,'_N1sREChecked.mat'])); % rescored data
+    if size(DRE,1) == 0
+            error('%s does not exist',dir(fullfile(dataPath,sub_label,ses_label,run_label,...
+            [sub_label, '_', ses_label,'_',task_label,'_',run_label,'_N1sREChecked.mat'])));
+    end 
+    dataNameRE = fullfile(DRE(1).folder, DRE(1).name);
+    dataRE = load(dataNameRE);
+    dataBase(subj).metadata.visual_scored = dataRE.rescored;
+end
+%%
+clear dataNameRE dataRE DRE run_label ses_label sub_label task_label subj dataPath
 %% optimize detector
 % for cECoG data, these are the best parameters:
 cfg.amplitude_thresh = 2.6;
@@ -194,9 +272,9 @@ cfg.minSD = 50;
 cfg.sel = 20;
 
 % range of parameters tested:
-minSD_range = 11:1:13 ;
-sel_range = 10:1:12 ;
-amplitude_tresh_range = 3.2:0.1:3.3 ;
+amplitude_tresh_range = 3:0.1:4 ;
+minSD_range = 0:1:30 ;
+sel_range = 0:1:20 ;
 
 n=1;
 % pre-allocation
@@ -233,8 +311,13 @@ for sl = sel_range
 end
 end
 end
-clear n subjs combs sel_range minSD_range amplitude_tresh_range detected scored sd sl amplTh
-
+%clear n subjs combs sel_range minSD_range amplitude_tresh_range detected scored sd sl amplTh
+%% load TN TP FP FN for range of parameters for use again (niet naar de github!)
+dataPath = '/home/susanne/Documents/Analyse_2_derivatives/TP_TN_FP_FN'; % zet dit nog naar een dataPath in fridge bij de scoring
+range = '2.1';
+dataName_TN = fullfile(dataPath,['TN_', range,'.mat']); dataName_TP = fullfile(dataPath,['TP_', range,'.mat']);dataName_FN = fullfile(dataPath,['FN_', range,'.mat']);dataName_FP = fullfile(dataPath,['FP_', range,'.mat']); dataName_comb = fullfile(dataPath,['comb_', range,'.mat']);
+load(dataName_TN); load(dataName_TP);load(dataName_FN);load(dataName_FP); load(dataName_comb)
+clear dataName_FN dataName_FP dataName_TP dataName_TN range dataPath dataName_comb
 %% calculate and visualize performance for each setting
 % analyze the performances per subject
 subjs = size(dataBase,2);
@@ -247,6 +330,8 @@ npv_subj = NaN(combs,subjs); % negative predicitive value
 d_roc_subj = NaN(combs,subjs); % distance to top left corner of ROC 
 d_prc_subj = NaN(combs,subjs); % distance to top left corner of PRC (precision-recall curve
 F_score_subj = NaN(combs, subjs); % F-score (wss hetzelfde als d_roc)
+F2_score_subj = NaN(combs, subjs); % F2-score  sensitivity to be twice as important as positive predictive value 
+beta=2;
 
 for subj = 1:size(dataBase,2)
    nr_visual_scored(subj) = size(dataBase(subj).metadata.visual_scored,1)*size(dataBase(subj).metadata.visual_scored,2);
@@ -258,6 +343,7 @@ for subj = 1:size(dataBase,2)
         d_roc_subj(n,subj) = sqrt((1-sens_subj(n,subj))^2+ (1-spec_subj(n,subj))^2);
         d_prc_subj(n,subj) = sqrt((1-sens_subj(n,subj))^2+ (1-ppv_subj(n,subj))^2);
         F_score_subj(n,subj) = TP(n,subj)/(TP(n,subj)+0.5*(FP(n,subj)+FN(n,subj)));
+        F2_score_subj(n,subj) = ((1+beta^2)*TP(n,subj))/((1+beta^2)*TP(n,subj)+(beta^2)*FN(n,subj)+FP(n,subj));
    end
 end
 
@@ -273,6 +359,7 @@ npv = NaN(combs,1); % negative predicitive value
 d_roc = NaN(combs,1); % distance to top left corner of ROC 
 d_prc = NaN(combs,1); % distance to top left corner of PRC (precision-recall curve)
 F_score = NaN(combs,1); % F-score (wss hetzelfde als d_roc)
+F2_score = NaN(combs, 1); % F2-score  sensitivity to be twice as important as positive predictive value 
 
 for n = 1:length(combination)
     TP_all(n,1) = sum(TP(n,:), 'omitnan');
@@ -287,30 +374,17 @@ for n = 1:length(combination)
         d_roc(n,1) = sqrt((1-sens(n))^2+ (1-spec(n))^2);
         d_prc(n,1) = sqrt((1-sens(n))^2+ (1-ppv(n))^2);  
         F_score(n,1) = TP_all(n)/(TP_all(n)+0.5*(FP_all(n)+FN_all(n)));
+        F2_score(n,1) = ((1+beta^2)*TP(n))/((1+beta^2)*TP(n)+(beta^2)*FN(n)+FP(n));
     else
         error('Number of visual scored CCEPs is not the same as sum of all detected');
     end
 end
-clear subjs subj n 
+clear subjs subj n beta
 %% best combination for this range of parameters
 [value, best_comb] = min(d_prc);
 best_amplTh = combination(best_comb,1);
 best_minSD = combination(best_comb,2);
 best_sel = combination(best_comb,3);
-
-%% more sensitive algorithm
-% best combination for this range of parameters
-[value2, best_comb2] = min(d_roc);
-best_amplTh2 = combination(best_comb2,1);
-best_minSD2 = combination(best_comb2,2);
-best_sel2 = combination(best_comb2,3);
-%% algorithm based on fscore
-% best combination for this range of parameters
-[value3, best_comb3] = min(F_score);
-best_amplTh3 = combination(best_comb3,1);
-best_minSD3 = combination(best_comb3,2);
-best_sel3 = combination(best_comb3,3);
-%%
 % plot ROC and PRC
 f1 = figure(1);
 scatter(1-spec,sens, 30, [0 0.4470 0.7410], '.')
@@ -324,8 +398,8 @@ ylim([0,1])
 ticks = 0:0.1:1;
 set(gca, 'YTick',ticks, 'XTick', ticks);
 box on
-print(f1,'-dpng', 'ROC_5','-r300')
-%saveas(f1,'ROC_5_d_roc.m')
+print(f1,'-dpng', 'ROC_d_prc_2_3','-r300')
+saveas(f1,'ROC_d_prc_2_3.m')
 
 f2 = figure(2);
 scatter(sens,ppv, 30, [0 0.4470 0.7410], '.')
@@ -338,48 +412,224 @@ xlim([0,1])
 ylim([0,1])
 set(gca, 'YTick',ticks, 'XTick', ticks);
 box on
-print(f2,'-dpng', 'PRC_5','-r300')
+print(f2,'-dpng', 'PRC__d_prc_2_3','-r300')
+saveas(f2,'PRC_d_prc_2_3.m')
+%% more sensitive algorithm
+% best combination for this range of parameters
+[value2, best_comb2] = min(d_roc);
+best_amplTh2 = combination(best_comb2,1);
+best_minSD2 = combination(best_comb2,2);
+best_sel2 = combination(best_comb2,3);
+% plot ROC and PRC
+f1 = figure(1);
+scatter(1-spec,sens, 30, [0 0.4470 0.7410], '.')
+hold on
+scatter(1-spec(best_comb2), sens(best_comb2), 50, [0.8500 0.3250 0.0980],'filled')
+title('ROC curve')
+xlabel(' 1-specificity')
+ylabel(' sensitivity')
+xlim([0,1])
+ylim([0,1])
+ticks = 0:0.1:1;
+set(gca, 'YTick',ticks, 'XTick', ticks);
+box on
+print(f1,'-dpng', 'ROC_d_roc_2_3','-r300')
+saveas(f1,'ROC_d_roc_2_3.m')
 
-%% test prut (kan er later uit)
-% best_FP = FP_all(best_comb2,1);
-% best_FN = FN_all(best_comb2,1);
-% best_FP_subj = FP_subj(best_comb2,:);
-% best_FN_subj = FN_subj(best_comb2,:);
-% all_subj = FN_subj(best_comb,:)+FP_subj(best_comb,:)+TN_subj(best_comb,:)+TP_subj(best_comb,:);
-% FN_norm_subj =best_FN_subj./all_subj;
-% FP_norm_subj =best_FP_subj./all_subj;
+f2 = figure(2);
+scatter(sens,ppv, 30, [0 0.4470 0.7410], '.')
+hold on
+scatter(sens(best_comb2), ppv(best_comb2), 50, [0.8500 0.3250 0.0980], 'filled')
+title('Precision-recall curve')
+xlabel('sensitivity')
+ylabel('positive predictive value')
+xlim([0,1])
+ylim([0,1])
+set(gca, 'YTick',ticks, 'XTick', ticks);
+box on
+print(f2,'-dpng', 'PRC__d_roc_2_3','-r300')
+saveas(f2,'PRC_d_roc_2_3.m')
+%% algorithm based on f2score
+% best combination for this range of parameters
+[value3, best_comb3] = max(F2_score);
+best_amplTh3 = combination(best_comb3,1);
+best_minSD3 = combination(best_comb3,2);
+best_sel3 = combination(best_comb3,3);
+%%
+% plot ROC and PRC
+f1 = figure(1);
+scatter(1-spec,sens, 30, [0 0.4470 0.7410], '.')
+hold on
+scatter(1-spec(best_comb3), sens(best_comb3), 50, [0.8500 0.3250 0.0980],'filled')
+title('ROC curve')
+xlabel(' 1-specificity')
+ylabel(' sensitivity')
+xlim([0,1])
+ylim([0,1])
+ticks = 0:0.1:1;
+set(gca, 'YTick',ticks, 'XTick', ticks);
+box on
+print(f1,'-dpng', 'ROC_F2_score_2_3','-r300')
+saveas(f1,'ROC_F2_score_2_3.m')
+
+f2 = figure(2);
+scatter(sens,ppv, 30, [0 0.4470 0.7410], '.')
+hold on
+scatter(sens(best_comb3), ppv(best_comb3), 50, [0.8500 0.3250 0.0980], 'filled')
+title('Precision-recall curve')
+xlabel('sensitivity')
+ylabel('positive predictive value')
+xlim([0,1])
+ylim([0,1])
+set(gca, 'YTick',ticks, 'XTick', ticks);
+box on
+print(f2,'-dpng', 'PRC_F2_score_2_3','-r300')
+saveas(f2,'PRC_F2_score_2_3.m')
+
+%% algorithm based on fscore
+% best combination for this range of parameters
+[value4, best_comb4] = max(F_score);
+best_amplTh4 = combination(best_comb4,1);
+best_minSD4 = combination(best_comb4,2);
+best_sel4 = combination(best_comb4,3);
+% plot ROC and PRC
+f1 = figure(1);
+scatter(1-spec,sens, 30, [0 0.4470 0.7410], '.')
+hold on
+scatter(1-spec(best_comb4), sens(best_comb4), 50, [0.8500 0.3250 0.0980],'filled')
+title('ROC curve')
+xlabel(' 1-specificity')
+ylabel(' sensitivity')
+xlim([0,1])
+ylim([0,1])
+ticks = 0:0.1:1;
+set(gca, 'YTick',ticks, 'XTick', ticks);
+box on
+print(f1,'-dpng', 'ROC_F1_score_2_3','-r300')
+saveas(f1,'ROC_F1_score_2_3.m')
+
+f2 = figure(2);
+scatter(sens,ppv, 30, [0 0.4470 0.7410], '.')
+hold on
+scatter(sens(best_comb4), ppv(best_comb4), 50, [0.8500 0.3250 0.0980], 'filled')
+title('Precision-recall curve')
+xlabel('sensitivity')
+ylabel('positive predictive value')
+xlim([0,1])
+ylim([0,1])
+set(gca, 'YTick',ticks, 'XTick', ticks);
+box on
+print(f2,'-dpng', 'PRC_F1_score_2_3','-r300')
+saveas(f2,'PRC_F1_score_2_3.m')
+
+%% all performance parameters in one plot all subj
+% plot ROC and PRC
+f1 = figure(1);
+scatter(1-spec,sens, 30, [0 0.4470 0.7410], '.')
+hold on
+scatter(1-spec(best_comb2), sens(best_comb2), 100, [0.8500 0.3250 0.0980],'filled')
+scatter(1-spec(best_comb), sens(best_comb), 100, [0.9290 0.6940 0.1250],'filled')
+scatter(1-spec(best_comb4), sens(best_comb4), 50, [0.4940 0.1840 0.5560],'filled')
+scatter(1-spec(best_comb3), sens(best_comb3), 50, [0.4660 0.6740 0.1880],'filled')
+title('ROC curve')
+xlabel(' 1-specificity')
+ylabel(' sensitivity')
+legend('range of parameters','d-roc','d-prc','F1-score','F2-score','Location','southeast')
+xlim([0,1])
+ylim([0,1])
+ticks = 0:0.1:1;
+set(gca, 'YTick',ticks, 'XTick', ticks);
+box on
+print(f1,'-dpng', 'ROC_subjall_2_3','-r300')
+saveas(f1,'ROC_subjall_2_3.m')
+
+f2 = figure(2);
+scatter(sens,ppv, 30, [0 0.4470 0.7410], '.')
+hold on
+scatter(sens(best_comb2), ppv(best_comb2), 100, [0.8500 0.3250 0.0980], 'filled')
+scatter(sens(best_comb), ppv(best_comb), 100, [0.9290 0.6940 0.1250], 'filled')
+scatter(sens(best_comb4), ppv(best_comb4), 50, [0.4940 0.1840 0.5560], 'filled')
+scatter(sens(best_comb3), ppv(best_comb3), 50, [0.4660 0.6740 0.1880], 'filled')
+title('Precision-recall curve')
+xlabel('sensitivity')
+ylabel('positive predictive value')
+legend('range of parameters','d-roc','d-prc','F1-score','F2-score','Location','southwest')
+xlim([0,1])
+ylim([0,1])
+set(gca, 'YTick',ticks, 'XTick', ticks);
+box on
+print(f2,'-dpng', 'PRC_subjall_2_3','-r300')
+saveas(f2,'PRC_subjall_2_3.m')
+
+%% all performance parameters in one plot per subj
+% plot ROC and PRC
+subj=3;
+f1 = figure(1);
+scatter(1-spec_subj(:,subj),sens_subj(:,subj), 30, [0 0.4470 0.7410], '.')
+hold on
+scatter(1-spec_subj(best_comb2,subj), sens_subj(best_comb2,subj), 100, [0.8500 0.3250 0.0980],'filled')
+scatter(1-spec_subj(best_comb,subj), sens_subj(best_comb,subj), 100, [0.9290 0.6940 0.1250],'filled')
+scatter(1-spec_subj(best_comb4,subj), sens_subj(best_comb4,subj), 50, [0.4940 0.1840 0.5560],'filled')
+scatter(1-spec_subj(best_comb3,subj), sens_subj(best_comb3,subj), 50, [0.4660 0.6740 0.1880],'filled')
+title('ROC curve')
+xlabel(' 1-specificity')
+ylabel(' sensitivity')
+legend('range of parameters subject 3','d-roc','d-prc','F1-score','F2-score','Location','southeast')
+xlim([0,1])
+ylim([0,1])
+ticks = 0:0.1:1;
+set(gca, 'YTick',ticks, 'XTick', ticks);
+box on
+print(f1,'-dpng', 'ROC_subj3_2_3','-r300')
+saveas(f1,'ROC_subj3_2_3.m')
+
+f2 = figure(2);
+scatter(sens_subj(:,subj),ppv_subj(:,subj), 30, [0 0.4470 0.7410], '.')
+hold on
+scatter(sens_subj(best_comb2,subj), ppv_subj(best_comb2,subj), 100, [0.8500 0.3250 0.0980], 'filled')
+scatter(sens_subj(best_comb,subj), ppv_subj(best_comb,subj), 100, [0.9290 0.6940 0.1250], 'filled')
+scatter(sens_subj(best_comb4,subj), ppv_subj(best_comb4,subj), 50, [0.4940 0.1840 0.5560], 'filled')
+scatter(sens_subj(best_comb3,subj), ppv_subj(best_comb3,subj), 50, [0.4660 0.6740 0.1880], 'filled')
+title('Precision-recall curve')
+xlabel('sensitivity')
+ylabel('positive predictive value')
+legend('range of parameters subject 3','d-roc','d-prc','F1-score','F2-score','Location','southwest')
+xlim([0,1])
+ylim([0,1])
+set(gca, 'YTick',ticks, 'XTick', ticks);
+box on
+print(f2,'-dpng', 'PRC_subj3_2_3','-r300')
+saveas(f2,'PRC_subj3_2_3.m')
+
 %% overview of performance values of best combination for this range of parameters
-%je zet dit nu in een matrix, wat prima is, maar je zou het ook in een tabel kunnen zetten 
-% en dit dan kunnen weergeven in je command window. 
-% Dan heb je direct je resultaten duidelijk in beeld. 
-% Ik weet in de matrix ook niet welke volgorde van variabelen (sens, spec etc) je gebruikt, 
-% in een tabel kan dit in 1x overzichtelijk zijn.
-pf_value = { 'Specificity';'Sensitivity';'Positive predicitve value';'Negative predicitve value';'Distance to corner ROC (receiver operating characteristic) curve';'Distance to corner precision-recall curve (PRC)'};
-pf_overal = round([spec(best_comb,:); sens(best_comb,:); ppv(best_comb,:);npv(best_comb,:);d_roc(best_comb,:);d_prc(best_comb,:)].*100);
-pf_subj = round([spec_subj(best_comb,:); sens_subj(best_comb,:);ppv_subj(best_comb,:);npv_subj(best_comb,:);d_roc_subj(best_comb,:); d_prc_subj(best_comb,:)].*100);
+best = best_comb3;
+pf_value = { 'Specificity';'Sensitivity';'Positive predicitve value';'Negative predicitve value';'Distance to corner ROC (receiver operating characteristic) curve';'Distance to corner precision-recall curve (PRC)';'F1 score';'F2 score'};
+pf_overal = round([spec(best,:); sens(best,:); ppv(best,:);npv(best,:);d_roc(best,:);d_prc(best,:);F_score(best,:);F2_score(best,:)].*100);
+pf_subj = round([spec_subj(best,:); sens_subj(best,:);ppv_subj(best,:);npv_subj(best,:);d_roc_subj(best,:); d_prc_subj(best,:);F_score_subj(best,:);F2_score_subj(best,:)].*100);
 pf_table = table(pf_value,pf_overal,pf_subj(:,1),pf_subj(:,2),pf_subj(:,3),'VariableNames',{'Performance','Overall','Subject 1','Subject 2','Subject 3'});
 
-%% show falsely detected cceps
-% % plot false positives 
+%%
+% show falsely detected cceps
+% plot false positives 
 % cfg.amplitude_thresh = best_amplTh;
 % cfg.minSD = best_minSD;
 % cfg.sel = best_sel;
+% cfg.n1Detected = 'y'; % --> if n1 peaks are detected
 % dataBase = detect_n1peak_ccep(dataBase, cfg);
+% run=1;
 % CCEP_FP = NaN(1); % number of FP a CCEP by second observation
 % per_CCEP_FP = NaN(1);
 % for subj = 1:size(dataBase,2)
-%     for run = 1:size(dataBase(subj).metadata,2)
-%             detected = dataBase(subj).metadata(run).ccep.n1_peak_sample; 
-%             detected(~isnan(detected)) = 1;
-%             detected(isnan(detected)) = 0;
-%             scored = dataBase_visualScores(subj).metadata(run).visual_scored;
-%             [FP_chan,FP_stimp]= find( scored == 0 & detected == 1);
-%             data_FP = show_ccep(dataBase,FP_stimp,FP_chan,subj,run,cfg);
-%             dataBase(subj).metadata(run).ccep.n1_peak_sample_FP = data_FP;
-%             CCEP_FP(subj,run) = sum(data_FP(:)==1); % de CCEPs die eigenlijk wel TP zijn
-%             per_CCEP_FP(subj,run) = CCEP_FP(subj,run)/length(FP_chan)*100;
-%             clear('data_FP')
-%     end
+%     detected = dataBase(subj).metadata.ccep.n1_peak_sample; 
+%     detected(~isnan(detected)) = 1;
+%     detected(isnan(detected)) = 0;
+%     scored = dataBase(subj).metadata.visual_scored;
+%     [FP_chan,FP_stimp]= find( scored == 0 & detected == 1);
+%     data_FP = show_ccep(dataBase,FP_stimp,FP_chan,subj,run,cfg);
+%     %dataBase(subj).metadata(run).ccep.n1_peak_sample_FP = data_FP;
+%     CCEP_FP(subj,run) = sum(data_FP(:)==1); % de CCEPs die eigenlijk wel TP zijn
+%     per_CCEP_FP(subj,run) = CCEP_FP(subj,run)/length(FP_chan)*100;
+%     clear('data_FP')
 % end
 % %%
 % % plot false negatives
