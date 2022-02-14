@@ -50,7 +50,9 @@ end
             [sub_label, '_', ses_label,'_',task_label,'_',run_label{j},'_N1sChecked.mat']));
         D2 = dir(fullfile(dataPath2,sub_label,ses_label,run_label{j},...
             [sub_label, '_', ses_label,'_',task_label,'_',run_label{j},'_N1sChecked.mat']));
-      
+%       DRE = dir(fullfile(dataPath,sub_label,ses_label,run_label{j},...
+%             [sub_label, '_', ses_label,'_',task_label,'_',run_label{j},'_N1sREChecked.mat'])); % rescored data
+
         if size(D,1) == 0
             error('%s does not exist',fullfile(dataPath,sub_label,ses_label,run_label{j},...
             [sub_label, '_', ses_label,'_',task_label,'_',run_label{j},'_N1sChecked.mat']));
@@ -61,19 +63,22 @@ end
             [sub_label, '_', ses_label,'_',task_label,'_',run_label{j},'_N1sChecked.mat']));
         end  
         
+%         if size(DRE,1) == 0
+%             error('%s does not exist',dir(fullfile(dataPath,sub_label,ses_label,run_label{j},...
+%             [sub_label, '_', ses_label,'_',task_label,'_',run_label{j},'_N1sREChecked.mat'])));
+%         end  
         dataName = fullfile(D(1).folder, D(1).name);
         dataName2 = fullfile(D2(1).folder, D2(1).name);
-        
+        %dataNameRE = fillfile(DRE(1).folder, DRE(1).name);
+       
         data= load(dataName);
-        data2= load(dataName2);   
-        
-%         dataBase(i).sub_label = sub_label;
-%         dataBase(i).ses_label = ses_label;
-%         dataBase(i).metadata(j).task_label = task_label;
-%         dataBase(i).metadata(j).run_label = run_label{j};
+        data2= load(dataName2); 
+        %dataRE = load(dataNameRE);
+ 
         dataBase(i).metadata(j).dataName_VisualScores = dataName;
         dataBase(i).metadata(j).ccep_VS1 = data;
         dataBase(i).metadata(j).ccep_VS2 = data2;
+        %dataBase(i).metadata(j).ccep_VSRE = dataRE;
         fprintf('...Subject %s %s has been run...\n',sub_label,run_label{j})
     end
 end
