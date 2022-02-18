@@ -195,57 +195,58 @@ end
 
 clear scored_both scored scored2 subj
 disp('scores merged')
+
 %% rescore CCEP with no consensus
 % in een functie/ander script 
-% % subj=3;
-% % run=1;
-% % 
-% % filefolder = fullfile(myDataPath.CCEPpath,dataBase(subj).sub_label,dataBase(subj).ses_label,dataBase(subj).metadata(run).run_label);
-% % if ~exist(filefolder,'dir')
-% %     mkdir(filefolder)
-% % end
-% % 
-% % scored = dataBase(subj).metadata.ccep_VS1.checked;
-% % scored2 = dataBase(subj).metadata.ccep_VS2.checked;
-% % scored_both = scored + scored2;
-% % [RE_chan,RE_stimp] = find( scored_both == 1);
-% % 
-% % cfg.n1Detected = 'n'; % --> if n1 peaks are detected
-% % rescored = dataBase(subj).metadata.visual_scored;
-% % 
-% % 
-% % for i = 1:length(RE_chan)
-% %     stimp = RE_stimp(i);
-% %     chan = RE_chan(i);
-% %     fs = dataBase(subj).metadata(run).ccep_header.Fs;
-% %     tt = -cfg.epoch_prestim+1/fs:1/fs:cfg.epoch_length-cfg.epoch_prestim;
-% %     
-% %     H = plot_ccep(dataBase,subj,run,cfg,tt,chan,stimp);
-% %     
-% %     perc = i / length(RE_chan) *100;
-% %     x = input(sprintf('%2.1f %% --- stimpair = %s-%s chan = %s --- Is this a CCEP? (y/n): ',...
-% %     perc,dataBase(subj).metadata(run).cc_stimchans{stimp,:},dataBase(subj).metadata(run).ch{chan}),'s');
-% %     % rescore the CCEPs
-% %     
-% %     if strcmp(x,'y') 
-% %     rescored(chan,stimp) = 1 ;
-% %     else
-% %     rescored(chan,stimp) = 0 ;
-% %     end
-% %     close(H)
-% %     clear('x')
-% %     % save also till which stimpair visual N1s are checked.
-% %     cfg.checkUntilStimp = stimp;
-% %     
-% %     filename = [dataBase(subj).sub_label,'_',dataBase(subj).ses_label,'_',dataBase(subj).metadata(run).task_label,'_',dataBase(subj).metadata(run).run_label,'_N1sREChecked.mat'];
-% %     
-% %     % save file during scoring in case of error
-% %     save(fullfile(filefolder,filename),'rescored');    
-% % end
-% % dataBase(subj).metadata.visual_scored = rescored;   
-% % fprintf('Rescore of %s completed\n',dataBase(subj).sub_label)
+subj=3;
+run=1;
 
-% %%
+filefolder = fullfile(myDataPath.CCEPpath,dataBase(subj).sub_label,dataBase(subj).ses_label,dataBase(subj).metadata(run).run_label);
+if ~exist(filefolder,'dir')
+    mkdir(filefolder)
+end
+
+scored = dataBase(subj).metadata.ccep_VS1.checked;
+scored2 = dataBase(subj).metadata.ccep_VS2.checked;
+scored_both = scored + scored2;
+[RE_chan,RE_stimp] = find( scored_both == 1);
+
+cfg.n1Detected = 'n'; % --> if n1 peaks are detected
+rescored = dataBase(subj).metadata.visual_scored;
+
+
+for i = 1:length(RE_chan)
+    stimp = RE_stimp(i);
+    chan = RE_chan(i);
+    fs = dataBase(subj).metadata(run).ccep_header.Fs;
+    tt = -cfg.epoch_prestim+1/fs:1/fs:cfg.epoch_length-cfg.epoch_prestim;
+    
+    H = plot_ccep(dataBase,subj,run,cfg,tt,chan,stimp);
+    
+    perc = i / length(RE_chan) *100;
+    x = input(sprintf('%2.1f %% --- stimpair = %s-%s chan = %s --- Is this a CCEP? (y/n): ',...
+    perc,dataBase(subj).metadata(run).cc_stimchans{stimp,:},dataBase(subj).metadata(run).ch{chan}),'s');
+    % rescore the CCEPs
+    
+    if strcmp(x,'y') 
+    rescored(chan,stimp) = 1 ;
+    else
+    rescored(chan,stimp) = 0 ;
+    end
+    close(H)
+    clear('x')
+    % save also till which stimpair visual N1s are checked.
+    cfg.checkUntilStimp = stimp;
+    
+    filename = [dataBase(subj).sub_label,'_',dataBase(subj).ses_label,'_',dataBase(subj).metadata(run).task_label,'_',dataBase(subj).metadata(run).run_label,'_N1sREChecked.mat'];
+    
+    % save file during scoring in case of error
+    save(fullfile(filefolder,filename),'rescored');    
+end
+dataBase(subj).metadata.visual_scored = rescored;   
+fprintf('Rescore of %s completed\n',dataBase(subj).sub_label)
+
+%
 % clear filename filefolder rescored scored scored2 scored_both stimp subj tt run RE_chan RE_stimp x i H fs chan perc
 %% load rescored data for use again
 dataPath = myDataPath.CCEPpath; 
@@ -266,55 +267,60 @@ for subj = 1:size(dataBase,2)
 end
 disp('rescored data loaded')
 clear dataNameRE dataRE DRE run_label ses_label sub_label task_label subj dataPath
+
+
 %% optimize detector
 % in een ander script want run je niet elke keer?
 % for cECoG data, these are the best parameters:
-% % cfg.amplitude_thresh = 2.6;
-% % cfg.n1_peak_range = 100;
-% % cfg.minSD = 50;
-% % cfg.sel = 20;
-% % 
-% % % range of parameters tested:
-% % amplitude_tresh_range = 0.5:0.1:1 ;
-% % minSD_range = 90:1:110 ;
-% % sel_range = 0:1:20 ;
-% % 
-% % n=1;
-% % % pre-allocation
-% % subjs = size(dataBase,2);
-% % combs = size(minSD_range,2)*size(sel_range,2)*size(amplitude_tresh_range,2);
-% % TP = NaN(combs,subjs); % true positives
-% % FN = NaN(combs,subjs); % false negatives
-% % FP = NaN(combs,subjs); % false positives
-% % TN = NaN(combs,subjs); % true negatives
-% % combination = NaN(combs,3); % combination of parameters. dit geeft een error
-% % 
-% % for amplTh = amplitude_tresh_range 
-% % for sd = minSD_range 
-% % for sl = sel_range
-% %     cfg.amplitude_thresh = amplTh;
-% %     cfg.minSD = sd;
-% %     cfg.sel = sl;
-% %     dataBase = detect_n1peak_ccep(dataBase, cfg); 
-% %     combination(n,:) = [amplTh sd sl]; % combination(n= number combination, parameter) parameter 1= amplitude_thresh; 2=minSD; 3=sel
-% %     for subj = 1:size(dataBase,2)
-% %         detected = dataBase(subj).metadata.ccep.n1_peak_sample; 
-% %         detected(~isnan(detected)) = 1;
-% %         detected(isnan(detected)) = 0;
-% %         scored = dataBase(subj).metadata.visual_scored;
-% % 
-% %         TP(n,subj) = numel(find( scored == 1 & detected == 1)); 
-% %         FN(n,subj) = numel(find( scored == 1 & detected == 0));
-% %         FP(n,subj) = numel(find( scored == 0 & detected == 1));
-% %         TN(n,subj) = numel(find( scored == 0 & detected == 0));
-% %     end
-% %     n=n+1;
-% %     fprintf('...Combination: Amplitude Threshold=%g, min SD of baseline=%g, Sel=%g, has been run...\n',...
-% %         amplTh,sd,sl)
-% % end
-% % end
-% % end
-%clear n subjs combs sel_range minSD_range amplitude_tresh_range detected scored sd sl amplTh
+cfg.amplitude_thresh = 2.6;
+cfg.n1_peak_range = 100;
+cfg.minSD = 50;
+cfg.sel = 20;
+
+% range of parameters tested:
+amplitude_tresh_range = 3.5:0.1:3.6 ;
+minSD_range = 12:1:13 ;
+sel_range = 0:1:1 ;
+
+n=1;
+% pre-allocation
+subjs = size(dataBase,2);
+combs = size(minSD_range,2)*size(sel_range,2)*size(amplitude_tresh_range,2);
+TP = NaN(combs,subjs); % true positives
+FN = NaN(combs,subjs); % false negatives
+FP = NaN(combs,subjs); % false positives
+TN = NaN(combs,subjs); % true negatives
+combination = NaN(combs,3); % combination of parameters. dit geeft een error
+
+for amplTh = amplitude_tresh_range 
+for sd = minSD_range 
+for sl = sel_range
+    cfg.amplitude_thresh = amplTh;
+    cfg.minSD = sd;
+    cfg.sel = sl;
+    dataBase = detect_n1peak_ccep(dataBase, cfg); 
+    combination(n,:) = [amplTh sd sl]; % combination(n= number combination, parameter) parameter 1= amplitude_thresh; 2=minSD; 3=sel
+    for subj = 1:size(dataBase,2)
+        detected = dataBase(subj).metadata.ccep.n1_peak_sample; 
+        % remove the not possible cceps (grey channels)
+        detected(~isnan(detected) & ~isinf(detected)) = 1; % detected N1 peaks
+        detected(isnan(detected)) = 0; % no detected N1 peaks
+        detected(isinf(detected)) = NaN;% do not include white matter, screw and csf
+        scored = dataBase(subj).metadata.visual_scored;
+
+        TP(n,subj) = numel(find( scored == 1 & detected == 1)); 
+        FN(n,subj) = numel(find( scored == 1 & detected == 0));
+        FP(n,subj) = numel(find( scored == 0 & detected == 1));
+        TN(n,subj) = numel(find( scored == 0 & detected == 0));
+    end
+    n=n+1;
+    fprintf('...Combination: Amplitude Threshold=%g, min SD of baseline=%g, Sel=%g, has been run...\n',...
+        amplTh,sd,sl)
+end
+end
+end
+%%
+clear n subjs combs sel_range minSD_range amplitude_tresh_range detected scored sd sl amplTh
 
 
 %% 2.4 without sel 0-10 
@@ -338,17 +344,26 @@ F_score_subj = NaN(combs, subjs); % F-score (wss hetzelfde als d_roc)
 F2_score_subj = NaN(combs, subjs); % F2-score  sensitivity to be twice as important as positive predictive value 
 beta=2;
 
+for subj= 1:size(dataBase,2)
+    nr_scored = size(dataBase(subj).metadata.visual_scored,1)*size(dataBase(subj).metadata.visual_scored,2);
+   [idx_ch_notgrey,idx_stimp_notgrey] = find(dataBase(subj).metadata.ccep.n1_peak_amplitude == Inf);
+    nr_visual_scored(subj)= nr_scored - length(idx_ch_notgrey);
+end
+
 for subj = 1:size(dataBase,2)
-   nr_visual_scored(subj) = size(dataBase(subj).metadata.visual_scored,1)*size(dataBase(subj).metadata.visual_scored,2);
-   for n = 1:length(combination)
-        spec_subj(n,subj) = TN(n,subj)/(TN(n,subj)+FP(n,subj));
-        sens_subj(n,subj) = TP(n,subj)/(TP(n,subj)+FN(n,subj));
-        ppv_subj(n,subj) = TP(n,subj)/(TP(n,subj)+FP(n,subj));
-        npv_subj(n,subj) = TN(n,subj)/(TN(n,subj)+FN(n,subj));
-        d_roc_subj(n,subj) = sqrt((1-sens_subj(n,subj))^2+ (1-spec_subj(n,subj))^2);
-        d_prc_subj(n,subj) = sqrt((1-sens_subj(n,subj))^2+ (1-ppv_subj(n,subj))^2);
-        F_score_subj(n,subj) = TP(n,subj)/(TP(n,subj)+0.5*(FP(n,subj)+FN(n,subj)));
-        F2_score_subj(n,subj) = ((1+beta^2)*TP(n,subj))/((1+beta^2)*TP(n,subj)+(beta^2)*FN(n,subj)+FP(n,subj));
+    for n = 1:length(combination)
+        if TP(n,subj) + FN(n,subj) + FP(n,subj) + TN(n,subj) == nr_visual_scored(subj)
+            spec_subj(n,subj) = TN(n,subj)/(TN(n,subj)+FP(n,subj));
+            sens_subj(n,subj) = TP(n,subj)/(TP(n,subj)+FN(n,subj));
+            ppv_subj(n,subj) = TP(n,subj)/(TP(n,subj)+FP(n,subj));
+            npv_subj(n,subj) = TN(n,subj)/(TN(n,subj)+FN(n,subj));
+            d_roc_subj(n,subj) = sqrt((1-sens_subj(n,subj))^2+ (1-spec_subj(n,subj))^2);
+            d_prc_subj(n,subj) = sqrt((1-sens_subj(n,subj))^2+ (1-ppv_subj(n,subj))^2);
+            F_score_subj(n,subj) = TP(n,subj)/(TP(n,subj)+0.5*(FP(n,subj)+FN(n,subj)));
+            F2_score_subj(n,subj) = ((1+beta^2)*TP(n,subj))/((1+beta^2)*TP(n,subj)+(beta^2)*FN(n,subj)+FP(n,subj));
+        else
+        error('Number of visual scored CCEPs is not the same as sum of all detected');
+        end
    end
 end
 
@@ -384,7 +399,7 @@ for n = 1:length(combination)
         error('Number of visual scored CCEPs is not the same as sum of all detected');
     end
 end
-clear subjs subj n beta
+clear subjs subj n beta idx_ch_notgrey idx_stimp_notgrey nr_scored 
 %% best combination for this range of parameters
 [value, best_comb] = min(d_prc);
 best_amplTh = combination(best_comb,1);
