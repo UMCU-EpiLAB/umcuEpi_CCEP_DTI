@@ -75,7 +75,7 @@ end
 
 % plot detected N1 (if detected)
 if strcmp(cfg.n1Detected, 'y')
-    h5 = plot(tt(ccep.n1_peak_sample(chan,stimp)),ccep.n1_peak_amplitude(chan,stimp),'o','MarkerFaceColor','r','MarkerEdgeColor','r','MarkerSize',4);
+    h5 = plot(tt(dataBase(subj).metadata(run).ccep.n1_peak_sample(chan,stimp)),dataBase(subj).metadata(run).ccep.n1_peak_amplitude(chan,stimp),'o','MarkerFaceColor','r','MarkerEdgeColor','r','MarkerSize',4);
 
 end
 hold off
