@@ -144,6 +144,8 @@ for subj= 1:size(dataBase,2)
             end
     end
 end
+
+disp('runs merged')
 clear scored scored2 data data_sorted_reref_avg data_sorted_avg data_sorted data_sorted_reref run subj stimsets stimchannels 
 %% kappa score
 
@@ -192,56 +194,56 @@ for subj = 1:size(dataBase,2)
 end
 
 clear scored_both scored scored2 subj
-
+disp('scores merged')
 %% rescore CCEP with no consensus
-
-subj=3;
-run=1;
-
-filefolder = fullfile(myDataPath.CCEPpath,dataBase(subj).sub_label,dataBase(subj).ses_label,dataBase(subj).metadata(run).run_label);
-if ~exist(filefolder,'dir')
-    mkdir(filefolder)
-end
-
-scored = dataBase(subj).metadata.ccep_VS1.checked;
-scored2 = dataBase(subj).metadata.ccep_VS2.checked;
-scored_both = scored + scored2;
-[RE_chan,RE_stimp] = find( scored_both == 1);
-
-cfg.n1Detected = 'n'; % --> if n1 peaks are detected
-rescored = dataBase(subj).metadata.visual_scored;
-
-
-for i = 1:length(RE_chan)
-    stimp = RE_stimp(i);
-    chan = RE_chan(i);
-    fs = dataBase(subj).metadata(run).ccep_header.Fs;
-    tt = -cfg.epoch_prestim+1/fs:1/fs:cfg.epoch_length-cfg.epoch_prestim;
-    
-    H = plot_ccep(dataBase,subj,run,cfg,tt,chan,stimp);
-    
-    perc = i / length(RE_chan) *100;
-    x = input(sprintf('%2.1f %% --- stimpair = %s-%s chan = %s --- Is this a CCEP? (y/n): ',...
-    perc,dataBase(subj).metadata(run).cc_stimchans{stimp,:},dataBase(subj).metadata(run).ch{chan}),'s');
-    % rescore the CCEPs
-    
-    if strcmp(x,'y') 
-    rescored(chan,stimp) = 1 ;
-    else
-    rescored(chan,stimp) = 0 ;
-    end
-    close(H)
-    clear('x')
-    % save also till which stimpair visual N1s are checked.
-    cfg.checkUntilStimp = stimp;
-    
-    filename = [dataBase(subj).sub_label,'_',dataBase(subj).ses_label,'_',dataBase(subj).metadata(run).task_label,'_',dataBase(subj).metadata(run).run_label,'_N1sREChecked.mat'];
-    
-    % save file during scoring in case of error
-    save(fullfile(filefolder,filename),'rescored');    
-end
-dataBase(subj).metadata.visual_scored = rescored;   
-fprintf('Rescore of %s completed\n',dataBase(subj).sub_label)
+% in een functie/ander script 
+% % subj=3;
+% % run=1;
+% % 
+% % filefolder = fullfile(myDataPath.CCEPpath,dataBase(subj).sub_label,dataBase(subj).ses_label,dataBase(subj).metadata(run).run_label);
+% % if ~exist(filefolder,'dir')
+% %     mkdir(filefolder)
+% % end
+% % 
+% % scored = dataBase(subj).metadata.ccep_VS1.checked;
+% % scored2 = dataBase(subj).metadata.ccep_VS2.checked;
+% % scored_both = scored + scored2;
+% % [RE_chan,RE_stimp] = find( scored_both == 1);
+% % 
+% % cfg.n1Detected = 'n'; % --> if n1 peaks are detected
+% % rescored = dataBase(subj).metadata.visual_scored;
+% % 
+% % 
+% % for i = 1:length(RE_chan)
+% %     stimp = RE_stimp(i);
+% %     chan = RE_chan(i);
+% %     fs = dataBase(subj).metadata(run).ccep_header.Fs;
+% %     tt = -cfg.epoch_prestim+1/fs:1/fs:cfg.epoch_length-cfg.epoch_prestim;
+% %     
+% %     H = plot_ccep(dataBase,subj,run,cfg,tt,chan,stimp);
+% %     
+% %     perc = i / length(RE_chan) *100;
+% %     x = input(sprintf('%2.1f %% --- stimpair = %s-%s chan = %s --- Is this a CCEP? (y/n): ',...
+% %     perc,dataBase(subj).metadata(run).cc_stimchans{stimp,:},dataBase(subj).metadata(run).ch{chan}),'s');
+% %     % rescore the CCEPs
+% %     
+% %     if strcmp(x,'y') 
+% %     rescored(chan,stimp) = 1 ;
+% %     else
+% %     rescored(chan,stimp) = 0 ;
+% %     end
+% %     close(H)
+% %     clear('x')
+% %     % save also till which stimpair visual N1s are checked.
+% %     cfg.checkUntilStimp = stimp;
+% %     
+% %     filename = [dataBase(subj).sub_label,'_',dataBase(subj).ses_label,'_',dataBase(subj).metadata(run).task_label,'_',dataBase(subj).metadata(run).run_label,'_N1sREChecked.mat'];
+% %     
+% %     % save file during scoring in case of error
+% %     save(fullfile(filefolder,filename),'rescored');    
+% % end
+% % dataBase(subj).metadata.visual_scored = rescored;   
+% % fprintf('Rescore of %s completed\n',dataBase(subj).sub_label)
 
 % %%
 % clear filename filefolder rescored scored scored2 scored_both stimp subj tt run RE_chan RE_stimp x i H fs chan perc
@@ -262,62 +264,65 @@ for subj = 1:size(dataBase,2)
     dataRE = load(dataNameRE);
     dataBase(subj).metadata.visual_scored = dataRE.rescored;
 end
-%%
+disp('rescored data loaded')
 clear dataNameRE dataRE DRE run_label ses_label sub_label task_label subj dataPath
 %% optimize detector
+% in een ander script want run je niet elke keer?
 % for cECoG data, these are the best parameters:
-cfg.amplitude_thresh = 2.6;
-cfg.n1_peak_range = 100;
-cfg.minSD = 50;
-cfg.sel = 20;
-
-% range of parameters tested:
-amplitude_tresh_range = 3:0.1:4 ;
-minSD_range = 0:1:30 ;
-sel_range = 0:1:20 ;
-
-n=1;
-% pre-allocation
-subjs = size(dataBase,2);
-combs = size(minSD_range,2)*size(sel_range,2)*size(amplitude_tresh_range,2);
-TP = NaN(combs,subjs); % true positives
-FN = NaN(combs,subjs); % false negatives
-FP = NaN(combs,subjs); % false positives
-TN = NaN(combs,subjs); % true negatives
-combination = NaN(combs,3); % combination of parameters. dit geeft een error
-
-for amplTh = amplitude_tresh_range 
-for sd = minSD_range 
-for sl = sel_range
-    cfg.amplitude_thresh = amplTh;
-    cfg.minSD = sd;
-    cfg.sel = sl;
-    dataBase = detect_n1peak_ccep(dataBase, cfg); 
-    combination(n,:) = [amplTh sd sl]; % combination(n= number combination, parameter) parameter 1= amplitude_thresh; 2=minSD; 3=sel
-    for subj = 1:size(dataBase,2)
-        detected = dataBase(subj).metadata.ccep.n1_peak_sample; 
-        detected(~isnan(detected)) = 1;
-        detected(isnan(detected)) = 0;
-        scored = dataBase(subj).metadata.visual_scored;
-
-        TP(n,subj) = numel(find( scored == 1 & detected == 1)); 
-        FN(n,subj) = numel(find( scored == 1 & detected == 0));
-        FP(n,subj) = numel(find( scored == 0 & detected == 1));
-        TN(n,subj) = numel(find( scored == 0 & detected == 0));
-    end
-    n=n+1;
-    fprintf('...Combination: Amplitude Threshold=%g, min SD of baseline=%g, Sel=%g, has been run...\n',...
-        amplTh,sd,sl)
-end
-end
-end
+% % cfg.amplitude_thresh = 2.6;
+% % cfg.n1_peak_range = 100;
+% % cfg.minSD = 50;
+% % cfg.sel = 20;
+% % 
+% % % range of parameters tested:
+% % amplitude_tresh_range = 0.5:0.1:1 ;
+% % minSD_range = 90:1:110 ;
+% % sel_range = 0:1:20 ;
+% % 
+% % n=1;
+% % % pre-allocation
+% % subjs = size(dataBase,2);
+% % combs = size(minSD_range,2)*size(sel_range,2)*size(amplitude_tresh_range,2);
+% % TP = NaN(combs,subjs); % true positives
+% % FN = NaN(combs,subjs); % false negatives
+% % FP = NaN(combs,subjs); % false positives
+% % TN = NaN(combs,subjs); % true negatives
+% % combination = NaN(combs,3); % combination of parameters. dit geeft een error
+% % 
+% % for amplTh = amplitude_tresh_range 
+% % for sd = minSD_range 
+% % for sl = sel_range
+% %     cfg.amplitude_thresh = amplTh;
+% %     cfg.minSD = sd;
+% %     cfg.sel = sl;
+% %     dataBase = detect_n1peak_ccep(dataBase, cfg); 
+% %     combination(n,:) = [amplTh sd sl]; % combination(n= number combination, parameter) parameter 1= amplitude_thresh; 2=minSD; 3=sel
+% %     for subj = 1:size(dataBase,2)
+% %         detected = dataBase(subj).metadata.ccep.n1_peak_sample; 
+% %         detected(~isnan(detected)) = 1;
+% %         detected(isnan(detected)) = 0;
+% %         scored = dataBase(subj).metadata.visual_scored;
+% % 
+% %         TP(n,subj) = numel(find( scored == 1 & detected == 1)); 
+% %         FN(n,subj) = numel(find( scored == 1 & detected == 0));
+% %         FP(n,subj) = numel(find( scored == 0 & detected == 1));
+% %         TN(n,subj) = numel(find( scored == 0 & detected == 0));
+% %     end
+% %     n=n+1;
+% %     fprintf('...Combination: Amplitude Threshold=%g, min SD of baseline=%g, Sel=%g, has been run...\n',...
+% %         amplTh,sd,sl)
+% % end
+% % end
+% % end
 %clear n subjs combs sel_range minSD_range amplitude_tresh_range detected scored sd sl amplTh
-%% load TN TP FP FN for range of parameters for use again (niet naar de github!)
-dataPath = '/home/susanne/Documents/Analyse_2_derivatives/TP_TN_FP_FN'; % zet dit nog naar een dataPath in fridge bij de scoring
-range = '2.1';
-dataName_TN = fullfile(dataPath,['TN_', range,'.mat']); dataName_TP = fullfile(dataPath,['TP_', range,'.mat']);dataName_FN = fullfile(dataPath,['FN_', range,'.mat']);dataName_FP = fullfile(dataPath,['FP_', range,'.mat']); dataName_comb = fullfile(dataPath,['comb_', range,'.mat']);
-load(dataName_TN); load(dataName_TP);load(dataName_FN);load(dataName_FP); load(dataName_comb)
-clear dataName_FN dataName_FP dataName_TP dataName_TN range dataPath dataName_comb
+
+
+%% 2.4 without sel 0-10 
+% combination=combination(in_combs,:);
+% FN=FN(in_combs,:);
+% FP=FP(in_combs,:);
+% TN=TN(in_combs,:);
+% TP=TP(in_combs,:);
 %% calculate and visualize performance for each setting
 % analyze the performances per subject
 subjs = size(dataBase,2);
@@ -385,6 +390,7 @@ clear subjs subj n beta
 best_amplTh = combination(best_comb,1);
 best_minSD = combination(best_comb,2);
 best_sel = combination(best_comb,3);
+%%
 % plot ROC and PRC
 f1 = figure(1);
 scatter(1-spec,sens, 30, [0 0.4470 0.7410], '.')
@@ -398,8 +404,8 @@ ylim([0,1])
 ticks = 0:0.1:1;
 set(gca, 'YTick',ticks, 'XTick', ticks);
 box on
-print(f1,'-dpng', 'ROC_d_prc_2_3','-r300')
-saveas(f1,'ROC_d_prc_2_3.m')
+print(f1,'-dpng', 'ROC_d_prc_2_5','-r300')
+saveas(f1,'ROC_d_prc_2_5.m')
 
 f2 = figure(2);
 scatter(sens,ppv, 30, [0 0.4470 0.7410], '.')
@@ -412,14 +418,15 @@ xlim([0,1])
 ylim([0,1])
 set(gca, 'YTick',ticks, 'XTick', ticks);
 box on
-print(f2,'-dpng', 'PRC__d_prc_2_3','-r300')
-saveas(f2,'PRC_d_prc_2_3.m')
+print(f2,'-dpng', 'PRC__d_prc_2_5','-r300')
+saveas(f2,'PRC_d_prc_2_5.m')
 %% more sensitive algorithm
 % best combination for this range of parameters
 [value2, best_comb2] = min(d_roc);
 best_amplTh2 = combination(best_comb2,1);
 best_minSD2 = combination(best_comb2,2);
 best_sel2 = combination(best_comb2,3);
+%%
 % plot ROC and PRC
 f1 = figure(1);
 scatter(1-spec,sens, 30, [0 0.4470 0.7410], '.')
@@ -433,8 +440,8 @@ ylim([0,1])
 ticks = 0:0.1:1;
 set(gca, 'YTick',ticks, 'XTick', ticks);
 box on
-print(f1,'-dpng', 'ROC_d_roc_2_3','-r300')
-saveas(f1,'ROC_d_roc_2_3.m')
+print(f1,'-dpng', 'ROC_d_roc_2_5','-r300')
+saveas(f1,'ROC_d_roc_2_5.m')
 
 f2 = figure(2);
 scatter(sens,ppv, 30, [0 0.4470 0.7410], '.')
@@ -447,8 +454,8 @@ xlim([0,1])
 ylim([0,1])
 set(gca, 'YTick',ticks, 'XTick', ticks);
 box on
-print(f2,'-dpng', 'PRC__d_roc_2_3','-r300')
-saveas(f2,'PRC_d_roc_2_3.m')
+print(f2,'-dpng', 'PRC__d_roc_2_5','-r300')
+saveas(f2,'PRC_d_roc_2_5.m')
 %% algorithm based on f2score
 % best combination for this range of parameters
 [value3, best_comb3] = max(F2_score);
@@ -469,8 +476,8 @@ ylim([0,1])
 ticks = 0:0.1:1;
 set(gca, 'YTick',ticks, 'XTick', ticks);
 box on
-print(f1,'-dpng', 'ROC_F2_score_2_3','-r300')
-saveas(f1,'ROC_F2_score_2_3.m')
+print(f1,'-dpng', 'ROC_F2_score_2_5','-r300')
+saveas(f1,'ROC_F2_score_2_5.m')
 
 f2 = figure(2);
 scatter(sens,ppv, 30, [0 0.4470 0.7410], '.')
@@ -483,8 +490,8 @@ xlim([0,1])
 ylim([0,1])
 set(gca, 'YTick',ticks, 'XTick', ticks);
 box on
-print(f2,'-dpng', 'PRC_F2_score_2_3','-r300')
-saveas(f2,'PRC_F2_score_2_3.m')
+print(f2,'-dpng', 'PRC_F2_score_2_5','-r300')
+saveas(f2,'PRC_F2_score_2_5.m')
 
 %% algorithm based on fscore
 % best combination for this range of parameters
@@ -492,6 +499,7 @@ saveas(f2,'PRC_F2_score_2_3.m')
 best_amplTh4 = combination(best_comb4,1);
 best_minSD4 = combination(best_comb4,2);
 best_sel4 = combination(best_comb4,3);
+%%
 % plot ROC and PRC
 f1 = figure(1);
 scatter(1-spec,sens, 30, [0 0.4470 0.7410], '.')
@@ -505,8 +513,8 @@ ylim([0,1])
 ticks = 0:0.1:1;
 set(gca, 'YTick',ticks, 'XTick', ticks);
 box on
-print(f1,'-dpng', 'ROC_F1_score_2_3','-r300')
-saveas(f1,'ROC_F1_score_2_3.m')
+print(f1,'-dpng', 'ROC_F1_score_2_5','-r300')
+saveas(f1,'ROC_F1_score_2_5.m')
 
 f2 = figure(2);
 scatter(sens,ppv, 30, [0 0.4470 0.7410], '.')
@@ -519,15 +527,15 @@ xlim([0,1])
 ylim([0,1])
 set(gca, 'YTick',ticks, 'XTick', ticks);
 box on
-print(f2,'-dpng', 'PRC_F1_score_2_3','-r300')
-saveas(f2,'PRC_F1_score_2_3.m')
+print(f2,'-dpng', 'PRC_F1_score_2_5','-r300')
+saveas(f2,'PRC_F1_score_2_5.m')
 
 %% all performance parameters in one plot all subj
 % plot ROC and PRC
 f1 = figure(1);
 scatter(1-spec,sens, 30, [0 0.4470 0.7410], '.')
 hold on
-scatter(1-spec(best_comb2), sens(best_comb2), 100, [0.8500 0.3250 0.0980],'filled')
+scatter(1-spec(best_comb2), sens(best_comb2), 50, [0.8500 0.3250 0.0980],'filled')
 scatter(1-spec(best_comb), sens(best_comb), 100, [0.9290 0.6940 0.1250],'filled')
 scatter(1-spec(best_comb4), sens(best_comb4), 50, [0.4940 0.1840 0.5560],'filled')
 scatter(1-spec(best_comb3), sens(best_comb3), 50, [0.4660 0.6740 0.1880],'filled')
@@ -540,13 +548,13 @@ ylim([0,1])
 ticks = 0:0.1:1;
 set(gca, 'YTick',ticks, 'XTick', ticks);
 box on
-print(f1,'-dpng', 'ROC_subjall_2_3','-r300')
-saveas(f1,'ROC_subjall_2_3.m')
+print(f1,'-dpng', 'ROC_subjall_2_1','-r300')
+saveas(f1,'ROC_subjall_2_1.m')
 
 f2 = figure(2);
 scatter(sens,ppv, 30, [0 0.4470 0.7410], '.')
 hold on
-scatter(sens(best_comb2), ppv(best_comb2), 100, [0.8500 0.3250 0.0980], 'filled')
+scatter(sens(best_comb2), ppv(best_comb2), 50, [0.8500 0.3250 0.0980], 'filled')
 scatter(sens(best_comb), ppv(best_comb), 100, [0.9290 0.6940 0.1250], 'filled')
 scatter(sens(best_comb4), ppv(best_comb4), 50, [0.4940 0.1840 0.5560], 'filled')
 scatter(sens(best_comb3), ppv(best_comb3), 50, [0.4660 0.6740 0.1880], 'filled')
@@ -558,8 +566,8 @@ xlim([0,1])
 ylim([0,1])
 set(gca, 'YTick',ticks, 'XTick', ticks);
 box on
-print(f2,'-dpng', 'PRC_subjall_2_3','-r300')
-saveas(f2,'PRC_subjall_2_3.m')
+print(f2,'-dpng', 'PRC_subjall_2_1','-r300')
+saveas(f2,'PRC_subjall_2_1.m')
 
 %% all performance parameters in one plot per subj
 % plot ROC and PRC
@@ -602,84 +610,118 @@ print(f2,'-dpng', 'PRC_subj3_2_3','-r300')
 saveas(f2,'PRC_subj3_2_3.m')
 
 %% overview of performance values of best combination for this range of parameters
-best = best_comb3;
+best = best_comb2;
 pf_value = { 'Specificity';'Sensitivity';'Positive predicitve value';'Negative predicitve value';'Distance to corner ROC (receiver operating characteristic) curve';'Distance to corner precision-recall curve (PRC)';'F1 score';'F2 score'};
 pf_overal = round([spec(best,:); sens(best,:); ppv(best,:);npv(best,:);d_roc(best,:);d_prc(best,:);F_score(best,:);F2_score(best,:)].*100);
 pf_subj = round([spec_subj(best,:); sens_subj(best,:);ppv_subj(best,:);npv_subj(best,:);d_roc_subj(best,:); d_prc_subj(best,:);F_score_subj(best,:);F2_score_subj(best,:)].*100);
 pf_table = table(pf_value,pf_overal,pf_subj(:,1),pf_subj(:,2),pf_subj(:,3),'VariableNames',{'Performance','Overall','Subject 1','Subject 2','Subject 3'});
 
+
+
+%% range of parameters 2.4 without sel 0-10
+
+%[amplTh sd sl]
+combs_ones_sel=find(combination(:,3)>=10);
+combs_zeros_sel=find(combination(:,3)<10);
+in_combs = combs_ones_sel;
+out_combs = combs_zeros_sel;
+
 %%
-% show falsely detected cceps
-% plot false positives 
-% cfg.amplitude_thresh = best_amplTh;
-% cfg.minSD = best_minSD;
-% cfg.sel = best_sel;
-% cfg.n1Detected = 'y'; % --> if n1 peaks are detected
-% dataBase = detect_n1peak_ccep(dataBase, cfg);
-% run=1;
-% CCEP_FP = NaN(1); % number of FP a CCEP by second observation
-% per_CCEP_FP = NaN(1);
-% for subj = 1:size(dataBase,2)
-%     detected = dataBase(subj).metadata.ccep.n1_peak_sample; 
-%     detected(~isnan(detected)) = 1;
-%     detected(isnan(detected)) = 0;
-%     scored = dataBase(subj).metadata.visual_scored;
-%     [FP_chan,FP_stimp]= find( scored == 0 & detected == 1);
-%     data_FP = show_ccep(dataBase,FP_stimp,FP_chan,subj,run,cfg);
-%     %dataBase(subj).metadata(run).ccep.n1_peak_sample_FP = data_FP;
-%     CCEP_FP(subj,run) = sum(data_FP(:)==1); % de CCEPs die eigenlijk wel TP zijn
-%     per_CCEP_FP(subj,run) = CCEP_FP(subj,run)/length(FP_chan)*100;
-%     clear('data_FP')
-% end
-% %%
-% % plot false negatives
-% CCEP_FN = NaN(1); % number of FP a CCEP by second observation
-% per_CCEP_FN = NaN(1);
-% for subj = 1:size(dataBase,2)
-%     for run = 1:size(dataBase(subj).metadata,2)
-%             detected = dataBase(subj).metadata(run).ccep.n1_peak_sample; 
-%             detected(~isnan(detected)) = 1;
-%             detected(isnan(detected)) = 0;
-%             scored = dataBase_visualScores(subj).metadata(run).visual_scored;
-%             [FN_chan,FN_stimp]= find( scored == 1 & detected == 0); 
-%             data_FN = show_ccep(dataBase,FN_stimp,FN_chan,subj,run,cfg);
-%             dataBase(subj).metadata(run).ccep.n1_peak_sample_FN = data_FN;
-%             CCEP_FN(subj,run) = sum(data_FN(:)==1); % de CCEPs die echt FN zijn
-%             per_CCEP_FN(subj,run) = CCEP_FN(subj,run)/length(FN_chan)*100;
-%             clear('data_FN')
-%     end
-% end
-% 
-%% peakfinder step for step
-% cfg.amplitude_thresh = 3.8;
-% cfg.minSD = 18;
-% cfg.sel = 14;
-% dataBase = detect_n1peak_ccep(dataBase, cfg);
-% 
-% amplitude_thresh = cfg.amplitude_thresh;
-% n1_peak_range = cfg.n1_peak_range;
-% epoch_prestim = cfg.epoch_prestim;
-% epoch_length = cfg.epoch_length;
-% minSD = cfg.minSD;
-% sel = cfg.sel;
-% 
-% subj=1;
-% run=1;
-% signal = dataBase(subj).metadata(run).cc_epoch_sorted_reref_avg;
-% chan=39;
-% stimp=2;
-% % create time struct 
-% tt = (1:epoch_length*dataBase(subj).metadata(run).ccep_header.Fs) / ...
-%       dataBase(subj).metadata(run).ccep_header.Fs - epoch_prestim;
-%                
-% % baseline subtraction: take median of part of the averaged signal for
-% % this stimulation pair before stimulation, which is the half of the
-% % epoch                
-% baseline_tt = tt>-2 & tt<-.1;
-% signal_median = median(signal(chan,stimp,baseline_tt),3,'omitnan');
-% % subtract median baseline from signal
-% new_signal = squeeze(signal(chan,stimp,:)) - signal_median;
-% peakfinder(new_signal(find(tt>0,1):find(tt>0.5,1)),sel,[],-1); % negative peaks
-% peakfinder(new_signal(find(tt>0,1):find(tt>0.5,1)),sel,[],1); % positive peaks
+% plot ROC and PRC
+f1 = figure(1);
+scatter(1-spec(out_combs),sens(out_combs), 30, [0.3010 0.7450 0.9330], 'o')
+hold on
+scatter(1-spec(in_combs),sens(in_combs), 30, [0 0.4470 0.7410], '.')
+scatter(1-spec(best_comb2), sens(best_comb2), 50, [0.8500 0.3250 0.0980],'filled')
+%scatter(1-spec(best_comb), sens(best_comb), 100, [0.9290 0.6940 0.1250],'filled')
+%scatter(1-spec(best_comb4), sens(best_comb4), 50, [0.4940 0.1840 0.5560],'filled')
+%scatter(1-spec(best_comb3), sens(best_comb3), 50, [0.4660 0.6740 0.1880],'filled')
+scatter(1-spec(2175), sens(2175), 50, [0.4660 0.6740 0.1880],'filled')
+title('ROC curve','Fontsize',14)
+xlabel(' 1-specificity','Fontsize',13)
+ylabel(' sensitivity','Fontsize',13)
+legend('range of parameters sel<10','range of parameters sel>l0','d-roc sel<10','d-roc sel>10','Location','southeast','Fontsize',12) %'d-prc','F1-score','F2-score'
+%xlim([0,1])
+%ylim([0,1])
+ticks = 0:0.05:1;
+set(gca, 'YTick',ticks, 'XTick', ticks,'Fontsize',12);
+set(gcf, 'Position', get(0, 'Screensize'));
+box on
+print(f1,'-dpng', 'ROC_with_without_sel','-r300')
+saveas(f1,'ROC_with_without_sel.m')
+
+f2 = figure(2);
+scatter(sens(out_combs),ppv(out_combs), 30, [0.3010 0.7450 0.9330], 'o')
+hold on
+scatter(sens(in_combs),ppv(in_combs), 30, [0 0.4470 0.7410], '.') % opactity dat je het door elkaar heen ziet
+scatter(sens(best_comb2), ppv(best_comb2), 50, [0.8500 0.3250 0.0980], 'filled')
+% scatter(sens(best_comb), ppv(best_comb), 100, [0.9290 0.6940 0.1250], 'filled')
+% scatter(sens(best_comb4), ppv(best_comb4), 50, [0.4940 0.1840 0.5560], 'filled')
+% scatter(sens(best_comb3), ppv(best_comb3), 50, [0.4660 0.6740 0.1880], 'filled')
+scatter(sens(2175), ppv(2175), 50, [0.4660 0.6740 0.1880], 'filled')
+title('Precision-recall curve','Fontsize',14)
+xlabel('sensitivity','Fontsize',13)
+ylabel('positive predictive value','Fontsize',13)
+legend('range of parameters sel<10','range of parameters sel>l0','d-roc sel<10','d-roc sel>10','Location','southwest','Fontsize',12) 
+%xlim([0,1])
+%ylim([0,1])
+set(gca, 'YTick',ticks, 'XTick', ticks,'Fontsize',12);
+set(gcf, 'Position', get(0, 'Screensize'));
+box on
+print(f2,'-dpng', 'PRC_with_without_sel','-r300')
+saveas(f2,'PRC_with_without_sel.m')
+
+
 %% determine optimal settings
 
+
+%% analyseer uitkomsten
+ %droc evt nog F2 score?
+% zet dit in command window: detect_n1peak_ccep
+cfg.amplitude_thresh = combination(3508,1); % best_comb2 verander dit ook als je de F2 score veranderd!
+cfg.minSD = combination(3508,2); % 2175 3508
+cfg.sel = combination(3508,3);
+cfg.n1_peak_range = 100;
+cfg.n1Detected = 'n'; % --> if n1 peaks are detected
+%% analyse peaks
+subj=1;%voeg subject nog to aan detect_n1peak_ccep_analyse
+chan= 13 ;
+stimp= 1;
+dataBase = detect_n1peak_ccep_analyse(dataBase, cfg,chan,stimp);
+%%
+dataBase = detect_n1peak_ccep(dataBase, cfg);
+
+%%
+subj=3;
+run=1;
+cfg.n1Detected = 'y';
+fs = dataBase(subj).metadata(run).ccep_header.Fs;
+tt = -cfg.epoch_prestim+1/fs:1/fs:cfg.epoch_length-cfg.epoch_prestim;
+
+scored = dataBase(subj).metadata.visual_scored;
+detected = dataBase(subj).metadata.ccep.n1_peak_sample;
+detected(~isnan(detected)) = 1;
+detected(isnan(detected)) = 0;
+[FP_chan,FP_stimp]= find( scored == 0 & detected == 1);
+%% analyse FP
+for i = 100:length(FP_chan)
+    stimp = FP_stimp(i);
+    chan = FP_chan(i);
+    H = plot_ccep(dataBase,subj,run,cfg,tt,chan,stimp);
+    perc = i / length(FP_chan) *100;
+    x = input(sprintf('%2.1f %% --- stimpair = %s-%s chan = %s --- save this false positive? (y/n): ',...
+    perc,dataBase(subj).metadata(run).cc_stimchans{stimp,:},dataBase(subj).metadata(run).ch{chan}),'s');
+end
+
+%%
+cfg.n1Detected = 'n';
+[FN_chan,FN_stimp]= find( scored == 1 & detected == 0);
+%% analyse FN
+for i = 120:length(FN_chan)
+    stimp = FN_stimp(i);
+    chan = FN_chan(i);
+    H = plot_ccep(dataBase,subj,run,cfg,tt,chan,stimp);
+    perc = i / length(FN_chan) *100;
+    x = input(sprintf('%2.1f %% --- stimpair = %s-%s chan = %s --- save this false negative? (y/n): ',...
+    perc,dataBase(subj).metadata(run).cc_stimchans{stimp,:},dataBase(subj).metadata(run).ch{chan}),'s');
+end
