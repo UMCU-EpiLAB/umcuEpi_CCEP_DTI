@@ -179,7 +179,7 @@ for subj = 1:length(dataBase)
                     temp_n1_peaks_samp = all_samp((n1_samples_start <= all_samp) & (all_samp <= n1_samples_end));
                     temp_n1_peaks_ampl = all_ampl((n1_samples_start <= all_samp) & (all_samp <= n1_samples_end));
 
-                    % if peak(s) found, select biggest peak
+                    %if peak(s) found, select biggest peak
                     if ~isempty(temp_n1_peaks_samp)
                         max_n1_ampl = find(abs(temp_n1_peaks_ampl) == max(abs(temp_n1_peaks_ampl)));
                         n1_peak_sample = temp_n1_peaks_samp(max_n1_ampl(1));
@@ -189,12 +189,12 @@ for subj = 1:length(dataBase)
                         n1_peak_sample = NaN;
                         n1_peak_amplitude = NaN;
                     end
-
-                    % if N1 exceeds positive threshold, it is deleted
-                    if temp_n1_peaks_ampl > 0
-                       n1_peak_sample = NaN;
-                       n1_peak_amplitude = NaN;   
-                    end
+% 
+%                     % if N1 exceeds positive threshold, it is deleted
+%                     if temp_n1_peaks_ampl > 0
+%                        n1_peak_sample = NaN;
+%                        n1_peak_amplitude = NaN;   
+%                     end
 
                     % when peak amplitude is saturated, it is deleted
                     if abs(n1_peak_amplitude) > 3000
