@@ -1,4 +1,4 @@
-% ccepDTI01: visually score CCEPs
+% ccepDTI01_scoreCCEP
 % visual scoring of CCEPs to optimize n1-detector for sEEG data
 
 % author: Dorien van Blooijs & Susanne Jelsma

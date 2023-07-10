@@ -1,25 +1,27 @@
-% function to read data into dataBase
-% author: Dorien van Blooijs
-% date: June 2019
-% Hier maak ik een functie de de gescoorde datasets inlaad voor beide
-% scorers
+% function to read scored data into dataBase
+% author: Susanne Jelsma 
+% date: November 2021
 
-function dataBase = load_visualScores(myDataPath,cfg, scorer)
 
-if scorer==1
-dataPath = myDataPath.CCEPpath; % CCEPpath2 is other scorer maak dit nog eleganter
-else 
-dataPath = myDataPath.CCEPpath2;
+function dataBase = load_visualScores(dataBase, myDataPath,cfg)
+
+dataPath = myDataPath.CCEPpath; 
+if isfield(myDataPath,'CCEPpath2')
+dataPath2 = myDataPath.CCEPpath2;
+else
+error('myDataPath.CCEPpath2 does not exist. Make sure you add this folder for a second observer in personalDataPath.m');
 end
 
-dataBase = struct([]);
-
-for i=1:size(cfg.sub_label,2)
-    if isfield(cfg,'sub_label')
-        sub_label = ['sub-' cfg.sub_label{i}];
-    else
+%dataBase = struct([]);
+% van hier tot line 44 de alerts miss niet nodig aangezien dat ook al in de
+% load_ECoGdata zit, wat voor deze wordt gerund in
+% ccepDTI02_optimizeDetector.
+if isfield(cfg,'sub_label')==0
         error('No sub-label specified');
-    end
+end
+
+ for i=1:size(cfg.sub_label,2)
+    sub_label = ['sub-' cfg.sub_label{i}];
     if isfield(cfg,'ses_label')
         ses_label = cfg.ses_label{i};
     else
@@ -46,24 +48,44 @@ for i=1:size(cfg.sub_label,2)
     for j=1:size(run_label,2)
         D = dir(fullfile(dataPath,sub_label,ses_label,run_label{j},...
             [sub_label, '_', ses_label,'_',task_label,'_',run_label{j},'_N1sChecked.mat']));
-      
+        D2 = dir(fullfile(dataPath2,sub_label,ses_label,run_label{j},...
+            [sub_label, '_', ses_label,'_',task_label,'_',run_label{j},'_N1sChecked.mat']));
+%       DRE = dir(fullfile(dataPath,sub_label,ses_label,run_label{j},...
+%             [sub_label, '_', ses_label,'_',task_label,'_',run_label{j},'_N1sREChecked.mat'])); % rescored data
+
         if size(D,1) == 0
             error('%s does not exist',fullfile(dataPath,sub_label,ses_label,run_label{j},...
             [sub_label, '_', ses_label,'_',task_label,'_',run_label{j},'_N1sChecked.mat']));
         end  
+
+        if size(D2,1) == 0
+            error('%s does not exist',fullfile(dataPath2,sub_label,ses_label,run_label{j},...
+            [sub_label, '_', ses_label,'_',task_label,'_',run_label{j},'_N1sChecked.mat']));
+        end  
         
+%         if size(DRE,1) == 0
+%             error('%s does not exist',dir(fullfile(dataPath,sub_label,ses_label,run_label{j},...
+%             [sub_label, '_', ses_label,'_',task_label,'_',run_label{j},'_N1sREChecked.mat'])));
+%         end  
         dataName = fullfile(D(1).folder, D(1).name);
-        
-        data= load(dataName);   
-        
-        dataBase(i).sub_label = sub_label;
-        dataBase(i).ses_label = ses_label;
-        dataBase(i).metadata(j).task_label = task_label;
-        dataBase(i).metadata(j).run_label = run_label{j};
-        dataBase(i).metadata(j).dataName = dataName;
-        dataBase(i).metadata(j).ccep = data;
+        dataName2 = fullfile(D2(1).folder, D2(1).name);
+        %dataNameRE = fillfile(DRE(1).folder, DRE(1).name);
+       
+        data= load(dataName);
+        data2= load(dataName2); 
+        %dataRE = load(dataNameRE);
+ 
+        dataBase(i).metadata(j).dataName_VisualScores = dataName;
+        dataBase(i).metadata(j).ccep_VS1 = data;
+        dataBase(i).metadata(j).ccep_VS2 = data2;
+        %dataBase(i).metadata(j).ccep_VSRE = dataRE;
         fprintf('...Subject %s %s has been run...\n',sub_label,run_label{j})
     end
 end
+fprintf('All subjects from %s are loaded\n', dataPath)
+fprintf('All subjects from %s are loaded\n', dataPath2)
 
-disp('All subjects are loaded')
+%je zou hier nog aan toe kunnen voegen uit welke file je deze info hebt gehaald, z
+% odat duidelijk is in je command window wie observer 1 en wie observer 2 is.
+end
+

@@ -12,7 +12,6 @@ function cfg = selectPatients(cfg, myDataPath)
 %                   {'task-SPESclin'}
 % cfg.run_label = cell([1 x number of subj]), each cell contains cell([1 x
 %                   number of runs]) --> {'run-xxxxxx'} {'run-xxxxxx'}
-
 %%
 % for each subject
 for subj = 1:size(cfg.sub_label,2)
@@ -51,7 +50,12 @@ for subj = 1:size(cfg.sub_label,2)
     elseif size(runfiles,2) == 1
         cfg.run_label{subj} = runfiles(1);
     else
+        x = input(sprintf('Select al runs of subject %s? (y/n): ',cfg.sub_label{subj}),'s'); 
+        if strcmp(x,'y') 
+        cfg.run_label{subj} = runfiles;
+        else
         run_label = input(sprintf(['Subject %s: Select one of these files, or type more runs by separating them with a comma: ' string, ': \n'],cfg.sub_label{subj},runfiles{:}),'s');
         cfg.run_label{subj} = strsplit(run_label,{', ',','});
+        end
     end
 end
