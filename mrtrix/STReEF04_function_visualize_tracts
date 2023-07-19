@@ -1,7 +1,7 @@
 # visualize white matter tracts between two electrode contact areas
 for subj in 0703 
 do    
-    Dir=/Fridge/users/susanne/derivatives/tract2connectome_all
+    Dir=tract2connectome_all # see personalDataPath_mrtrix file for the exact dir 
     cd $Dir/sub-RESP${subj}
     ch1=1 # channel number of the first electrode contact (must be the lowest of the two channels)
     ch2=20 # channel number of the second electrode contact
@@ -33,7 +33,7 @@ done
 # visualize white matter tracts between multiple electrode contacts and for multiple subjects
  for subj in 0703 0749 0753 0778 0856 0882 0905 0928 0968 0978 0984 0992 0993
 do    
-    Dir=/Fridge/users/susanne/derivatives/tracts2connectome_all
+    Dir=/tract2connectome_all
     cd $Dir/sub-RESP${subj}   
     j=0
     k=1
