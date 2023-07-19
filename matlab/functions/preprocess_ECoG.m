@@ -8,8 +8,6 @@ minstim = 5;
 for subj = 1:size(dataBase,2)
     
     for run = 1:size(dataBase(subj).metadata,2)
-        
-        
         %% define artefact period
         ev_artefact_start = dataBase(subj).metadata(run).tb_events.sample_start(strcmp(dataBase(subj).metadata(run).tb_events.trial_type,'artefact'));
         ev_artefact_stop = dataBase(subj).metadata(run).tb_events.sample_end(strcmp(dataBase(subj).metadata(run).tb_events.trial_type,'artefact'));
