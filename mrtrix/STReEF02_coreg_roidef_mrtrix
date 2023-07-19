@@ -1,5 +1,5 @@
 # STReEF02_coreg_roidef_mrtrix
-# co-registration and region-of-interest definition based on the DWI data and electrode positions
+# co-registration and region-of-interest definition based on the DWI data and electrode contact coordinates
 # author: Susanne Jelsma
 # date: Februari 2022
 #  Be aware! This file has a twin written in matlab code and to execute the code correctly, the sections of these files must be runned alternately. So first section 1 of this file, than section 1 of the file: ' STReEF02_coreg_roidef_matlab' and so on.. 
@@ -12,23 +12,23 @@ SECTION 1: prepare MRI, CT, and DWI data
 
 for subj in 0703 0749 0753 0778 0856 0882 0905 0928 0968 0978 0984 0992 0993
 do    
-    Dir=/Fridge/users/susanne/derivatives/coreg_ROI
+    Dir= coreg_ROI # see personalDataPath_mrtrix file for the exact dir (*coreg_ROI*)
     cd $Dir
     mkdir sub-RESP${subj}
 # copy the MRI acquired at the time of the DWI scan (the 'MRI-DWI') into the data folders
-    cp /Fridge/users/susanne/derivatives/DWI/sub-RESP${subj}/mrdata/DTI/{sub-RESP${subj}_Mansfield_T1W_1mm_SAG.PAR,sub-RESP${subj}_Mansfield_T1W_1mm_SAG.REC} /Fridge/users/susanne/derivatives/coreg_ROI/sub-RESP${subj}
+    cp *DWI*/mrdata/DTI/{sub-RESP${subj}_Mansfield_T1W_1mm_SAG.PAR,sub-RESP${subj}_Mansfield_T1W_1mm_SAG.REC} *coreg_ROI*
 # convert the MRI-DWI from .PAR/REC to .mif format
     cd $Dir/sub-RESP${subj}
     mrconvert sub-RESP${subj}_Mansfield_T1W_1mm_SAG.PAR -strides 1,2,3 MRI_DWI_sub-RESP${subj}.mif
 # convert the MRI-DWI from .mif to .nii format for the spm coregistration function
     mrconvert MRI_DWI_sub-RESP${subj}.mif -strides 1,2,3 MRI_DWI_sub-RESP${subj}.nii
 # copy the MRI acquired before electrode implantation (the 'MRI-CT') and the CT scan acquired after electrode implantation into the data folders
-   cp /Fridge/KNF/chronic_ECoG/sourcedata/sub-RESP${subj}/ses-1/anat/{sub-RESP${subj}_ses-1_CT.nii,sub-RESP${subj}_ses-1_T1w.nii} /Fridge/users/susanne/derivatives/coreg_ROI/sub-RESP${subj}
+   cp *Chronic_ECoG*/{sub-RESP${subj}_ses-1_CT.nii,sub-RESP${subj}_ses-1_T1w.nii} *coreg_ROI*
 # convert the MRI-CT and the CT from .nii to .mif format and make sure the ordering scheme of the data (the strides) are in RAS (right anterior posterior) format
     mrconvert sub-RESP${subj}_ses-1_T1w.nii -strides 1,2,3 sub-RESP${subj}_ses-1_T1w.mif
     mrconvert sub-RESP${subj}_ses-1_CT.nii -strides 1,2,3 sub-RESP${subj}_ses-1_CT.mif
 # copy the preprocessed DWI data into the folders
-    cp /Fridge/users/susanne/derivatives/preprocess_DWI/sub-RESP${subj}/dwi_den_unr_preproc_unbiased.mif /Fridge/users/susanne/derivatives/coreg_ROI/sub-RESP${subj}
+    cp *Preprocess_DWI*/dwi_den_unr_preproc_unbiased.mif *coreg_ROI*
 # extract the mean b0 volume to use in the co-registration process 
     dwiextract dwi_den_unr_preproc_unbiased.mif - -bzero | mrmath – mean mean_b0_preprocessed.mif –axis 3    
 # convert the mean b0 to .nii format for the spm coregistration function
@@ -44,7 +44,7 @@ SECTION 2: transform MRI and DWI data
 # transform the'MRI-DWI' with the transformation matrix between the DWI scan and the 'MRI-DWI'  
 for subj in 0703 0749 0753 0778 0856 0882 0905 0928 0968 0978 0984 0992 0993
 do   
-    Dir=/Fridge/users/susanne/derivatives/coreg_ROI
+    Dir=coreg_ROI
     cd $Dir/sub-RESP${subj}
     mrtransform MRI_DWI_sub-RESP${subj}.mif -linear transmatrix_dwi.txt MRI_DWI_sub-RESP${subj}_coreg.mif -info
     mrconvert MRI_DWI_sub-RESP${subj}_coreg.mif -strides 1,2,3 MRI_DWI_sub-RESP${subj}_coreg.nii
@@ -53,7 +53,7 @@ done
 # check the transformation of the 'MRI-DWI'  
 for subj in 0703 0749 0753 0778 0856 0882 0905 0928 0968 0978 0984 0992 0993
 do   
-    Dir=/Fridge/users/susanne/derivatives/coreg_ROI
+    Dir=coreg_ROI
     cd $Dir/sub-RESP${subj}
     mrview mean_b0_preprocessed.mif -overlay.load MRI_DWI_sub-RESP${subj}_coreg.mif -overlay.colourmap 2 -overlay.opacity 0.5 -overlay.load MRI_DWI_sub-RESP${subj}.mif -overlay.colourmap 1 -overlay.opacity 0.5 -mode 2 # DWI and 'MRI-DWI' overlayed
     mrview MRI_DWI_sub-RESP${subj}.mif -overlay.load MRI_DWI_sub-RESP${subj}_coreg.mif -overlay.colourmap 2 -overlay.opacity 0.5 -mode 2 # transformed and original 'MRI-DWI' overlayed
@@ -67,7 +67,7 @@ SECTION 3: transform MRI data
 # transform the CT scan acquired after electrode implantation with the transformation matrix calculated between the 'MRI-CT' and the 'MRI-DWI'. This transformation matrix can be used to bring the CT scan (who is in the MRI-CT space) into the MRI-DWI space. 
 for subj in 0703 0749 0753 0778 0856 0882 0905 0928 0968 0978 0984 0992 
 do   
-    Dir=/Fridge/users/susanne/derivatives/coreg_ROI
+    Dir=coreg_ROI 
     cd $Dir/sub-RESP${subj}
 mrtransform sub-RESP${subj}_ses-1_CT.mif -linear transmatrix_mri.txt CT_BIDS_sub-RESP${subj}_coreg.mif -info
 mrconvert CT_BIDS_sub-RESP${subj}_coreg.mif -strides 1,2,3 CT_BIDS_sub-RESP${subj}_coreg.nii
@@ -76,7 +76,7 @@ done
 # check the transformation of the CT scan
 for subj in 0703 0749 0753 0778 0856 0882 0905 0928 0968 0978 0984 0992 0993
 do   
-    Dir=/Fridge/users/susanne/derivatives/coreg_ROI
+    Dir=coreg_ROI 
     cd $Dir/sub-RESP${subj}
     mrview CT_BIDS_sub-RESP${subj}_coreg.mif -overlay.load MRI_DWI_sub-RESP${subj}.mif -overlay.colourmap 2 -overlay.opacity 0.5 -mode 2 # CT and 'MRI-DWI' overlayed
 done
@@ -89,7 +89,7 @@ SECTION 4: check transformed electrode coordinates, make masks for anatomically 
 # check if the transformed electrode coordinates correspond with the artefacts on the transformed CT (in MRI-DWI space)
 for subj in 0703 0749 0753 0778 0856 0882 0905 0928 0968 0978 0984 0992 0993
 do    
-    Dir=/Fridge/users/susanne/derivatives/coreg_ROI
+    Dir=coreg_ROI 
     cd $Dir/sub-RESP${subj}
     mrview CT_BIDS_sub-RESP${subj}_coreg.mif -roi.load coordinates_trans_CT.nii -roi.colour 3,207,252  -mode 2 
 done
@@ -99,7 +99,7 @@ done
 # use the MRI-DWI scan as the anatomical constraining image
 for subj in 0703 0749 0753 0778 0856 0882 0905 0928 0968 0978 0984 0992 0993
 do    
-    Dir=/Fridge/users/susanne/derivatives/coreg_ROI
+    Dir=coreg_ROI 
     cd $Dir/sub-RESP${subj}
     5ttgen fsl MRI_DWI_sub-RESP${subj}_coreg.mif 5tt_mask.mif # segment the MRI-DWI in six binary brain masks containing cortical grey matter, subcortical grey matter, white matter, the grey-white matter boundary, cerebrospinal fluid (CSF), and if present, pathological tissue: the 5TT image.
     5tt2gmwmi 5tt_mask.mif gmwmSeed_mask.mif #prepare a grey-white matter boundary mask for streamline seeding and region-of-interest definition
@@ -108,7 +108,7 @@ done
 # check the masks
 for subj in 0703 0749 0753 0778 0856 0882 0905 0928 0968 0978 0984 0992 0993
 do    
-    Dir=/Fridge/users/susanne/derivatives/coreg_ROI
+    Dir=coreg_ROI 
     cd $Dir/sub-RESP${subj}
     mrview 5tt_mask.mif -mode 2
     mrview gmwmSeed_mask.mif -mode 2
@@ -122,7 +122,7 @@ SECTION 5:  check the region-of-interest/electrode contact area definition
 # make a sub-folder in the designated co-registration and roi definition folder ('coreg_ROI') for region-of-interest definition for clarity (not necessary..), one folder ('coordinate_roi') is made for each subject
 for subj in 0703 0749 0753 0778 0856 0882 0905 0928 0968 0978 0984 0992 0993
 do    
-    Dir=/Fridge/users/susanne/derivatives/coreg_ROI/sub-RESP${subj}
+    Dir=coreg_ROI 
     cd $Dir
     mkdir coordinate_roi
 done
@@ -130,16 +130,16 @@ done
 # move the necessary data (the MRI-DWI, and the original and normal grey-white matter mask) from the main 'coreg_ROI' folder
 for subj in 0703 0749 0753 0778 0856 0882 0905 0928 0968 0978 0984 0992 0993  
 do
-    Dir=/Fridge/users/susanne/derivatives/coreg_ROI/sub-RESP${subj}
+    Dir=coreg_ROI 
     cd $Dir
-cp /Fridge/users/susanne/derivatives/coreg_ROI/sub-RESP${subj}/{MRI_DWI_sub-RESP${subj}_coreg.mif,check_logical.mif,gmwmSeed_mask.mif} /Fridge/users/susanne/derivatives/coreg_ROI/sub-RESP${subj}/coordinate_roi
+cp *coreg_ROI*/{MRI_DWI_sub-RESP${subj}_coreg.mif,check_logical.mif,gmwmSeed_mask.mif} /*coreg_ROI*/coordinate_roi
 done
 
 # check the prelimary electrode contact areas (all 64 mm3) and the final electrode contact areas (after handling overlap)
 for subj in 0703 0749 0753 0778 0856 0882 0905 0928 0968 0978 0984 0992 0993
 for subj in 0778
 do    
-    Dir=/Fridge/users/susanne/derivatives/coreg_ROI/sub-RESP${subj}
+    Dir=coreg_ROI 
     cd $Dir/coordinate_roi
     mrview MRI_DWI_sub-RESP${subj}_coreg.mif -interpolation 0 -roi.load coordinate_all.mif -roi.colour 3,207,252 -roi.load check_logical.mif -roi.colour 252,128,3 -mode 2 
     mrview MRI_DWI_sub-RESP${subj}_coreg.mif -interpolation 0 -roi.load coordinate_all_connectome.mif -roi.colour 3,207,252 -roi.load check_logical.mif -roi.colour 252,128,3 -mode 2 
@@ -148,7 +148,7 @@ done
 # make the electrode contact area data suitable as seeding mask for tractography, where each voxel contains a value based on the magnitude of the gradient of the GM/WM partial volume images (from the 5TT image). This value is used in a rejection sampling framework during the tractography to account for the effect that depending on the position & shape of the cortical surface relative to the image voxel grid, some regions of the brain having many more voxels in the grey-white matter boundary mask than others.
 for subj in 0703 0749 0753 0778 0856 0882 0905 0928 0968 0978 0984 0992 0993
 do    
-    Dir=/Fridge/users/susanne/derivatives/coreg_ROI/sub-RESP${subj}
+    Dir=coreg_ROI 
     cd $Dir/coordinate_roi
     # make sure the electrode contact area data is binairy
     mrcalc coordinate_all.mif 2 1 -replace coordinate_all_bin.mif # use coordinate_all because coordinate_all_connectome contains values corresponding to their electrode contact coordinate index
