@@ -13,7 +13,7 @@ SECTION 1 : anonymize & unify DWI data
 
 for subj in 0703 0749 0753 0778 0856 0882 0905 0928 0968 0978 0984 0992 0993
 do    
-    Dir=/Fridge/users/susanne/derivatives/DWI/sub-RESP${subj}
+    Dir=DWI # see personalDataPath_mrtrix file for the exact dir (*DWI*)
     cd $Dir/mrdata/DTI
     for_each sub-RESP${subj}_MB3_sDTI_1600_60_PA.PAR : mrview IN
 done
@@ -21,7 +21,7 @@ done
 # change the patient name and birthdate in the fileames to their RESP nr. (you only need to run this once)
 
 for subj in 0703 0749 0753 0778 0856 0882 0905 0928 0968 0978 0984 0992; do
-    Dir=/Fridge/users/susanne/derivatives/DWI/sub-RESP${subj}
+    Dir=DWI
     cd $Dir/mrdata/DTI
     for f in *.PAR; do
         mv $f ${f:10}
@@ -43,7 +43,7 @@ done
 # remove some information about the aquisitions to unify the filenames to ease further analysis. Information to be removed: use of WIP, acquisition and reconstruction nr. 
 
 for subj in 0749 0778 0856 0882 0928 0968 0978 0703 0753 0984 ; do
-    Dir=/Fridge/users/susanne/derivatives/DWI/sub-RESP${subj}
+    Dir=DWI
     cd $Dir/mrdata/DTI
     # remove acuiqistion and reconstruction nr.
     for f in *.PAR; do
@@ -71,7 +71,7 @@ for subj in 0749 0778 0856 0882 0928 0968 0978 0703 0753 0984 ; do
  # subj without WIP in filename
  for subj in 0905 0992 0993
 do    
-    Dir=/Fridge/users/susanne/derivatives/DWI/sub-RESP${subj}
+    Dir=DWI
     cd $Dir/mrdata/DTI
     # remove acuiqistion and reconstruction nr.
     for f in *.PAR; do
@@ -93,11 +93,11 @@ done
 
 for subj in 0703 0749 0753 0778 0856 0882 0905 0928 0968 0978 0984 0992 0993
 do    
-    Dir=/Fridge/users/susanne/derivatives/preprocess_DWI
+    Dir=Preprocess_DWI
     cd $Dir
     mkdir sub-RESP${subj}
     # copy the DWI data into the folders
-    cp /Fridge/users/susanne/derivatives/DWI/sub-RESP${subj}/mrdata/DTI/{sub-RESP${subj}_MB3_sDTI_1600_4_AP.PAR,sub-RESP${subj}_MB3_sDTI_1600_4_AP.REC,sub-RESP${subj}_MB3_sDTI_1600_60_PA.PAR,sub-RESP${subj}_MB3_sDTI_1600_60_PA.REC} /Fridge/users/susanne/derivatives/preprocess_DWI/sub-RESP${subj}
+    cp *DWI*/mrdata/DTI/{sub-RESP${subj}_MB3_sDTI_1600_4_AP.PAR,sub-RESP${subj}_MB3_sDTI_1600_4_AP.REC,sub-RESP${subj}_MB3_sDTI_1600_60_PA.PAR,sub-RESP${subj}_MB3_sDTI_1600_60_PA.REC} *Preprocess_DWI*
     # convert the DWI files (60_PA and 4_AP) from .PAR/REC to .mif format
     cd $Dir/sub-RESP${subj}
     mrconvert sub-RESP${subj}_MB3_sDTI_1600_60_PA.PAR dwi_raw.mif
@@ -109,7 +109,7 @@ SECTION 2 : preprocessing 'Designer' pipeline (did not use the designer code on 
 -----------------------------------------------------------------------
 for subj in 0703 0749 0753 0778 0856 0882 0905 0928 0968 0978 0984 0992 0993
 do    
-    Dir=/Fridge/users/susanne/derivatives/preprocess_DWI
+    Dir=Preprocess_DWI
     cd $Dir/sub-RESP${subj}
     
     # Denoising (MP-PCA)
@@ -154,7 +154,7 @@ SECTION 3 : check all the steps of the preprocessing to make sure it is performe
     
 for subj in 0703 0749 0753 0778 0856 0882 0905 0928 0968 0978 0984 0992 0993
 do    
-    Dir=/Fridge/users/susanne/derivatives/preprocess_DWI
+    Dir=Preprocess_DWI
     cd $Dir/sub-RESP${subj}   
     
     # Show raw b=0 PA and AP volumes
