@@ -1,0 +1,213 @@
+# STReEF01_preprocessDWI
+# pre processing of DWI data
+# author: Susanne Jelsma
+# date: Februari 2022
+# anonymize & unify DWI data, denoise DWI data and correct for common distortions following the 'Designer' pipeline proposed by Ades-Aron et al. 2018: Marchenko-Pastur Principal Component Analysis (MP-PCA) denoising, Gibbs ringing correction, EPI distortion correction, Eddy current correction, movement distortion correction, b0 field inhomogeneity correction, b1 bias field correction, and brain mask estimation, save the processed DWI data for further analysis, display and check the DWI data
+
+-----------------------------------------------------------------------
+SECTION 1 : anonymize & unify DWI data
+-----------------------------------------------------------------------
+# name all patient folders with their sub-RESP name by hand
+
+# view the raw DWI data of each subject
+
+for subj in 0703 0749 0753 0778 0856 0882 0905 0928 0968 0978 0984 0992 0993
+do    
+    Dir=/Fridge/users/susanne/derivatives/DWI/sub-RESP${subj}
+    cd $Dir/mrdata/DTI
+    for_each sub-RESP${subj}_MB3_sDTI_1600_60_PA.PAR : mrview IN
+done
+
+# change the patient name and birthdate in the fileames to their RESP nr. (you only need to run this once)
+
+for subj in 0703 0749 0753 0778 0856 0882 0905 0928 0968 0978 0984 0992; do
+    Dir=/Fridge/users/susanne/derivatives/DWI/sub-RESP${subj}
+    cd $Dir/mrdata/DTI
+    for f in *.PAR; do
+        mv $f ${f:10}
+    donef
+
+
+    for f in *.PAR; do
+    mv "$f" "sub-RESP${subj}${f}"
+    done
+    for f in *.REC; do
+        mv $f ${f:10}
+    done
+
+    for f in *.REC; do
+    mv "$f" "sub-RESP${subj}${f}"
+    done
+done
+
+# remove some information about the aquisitions to unify the filenames to ease further analysis. Information to be removed: use of WIP, acquisition and reconstruction nr. 
+
+for subj in 0749 0778 0856 0882 0928 0968 0978 0703 0753 0984 ; do
+    Dir=/Fridge/users/susanne/derivatives/DWI/sub-RESP${subj}
+    cd $Dir/mrdata/DTI
+    # remove acuiqistion and reconstruction nr.
+    for f in *.PAR; do
+       mv $f ${f::(-8)}.PAR
+    done
+     for f in *.REC; do
+        mv $f ${f::(-8)}.REC
+    done   
+    # remove WIP 
+    for f in *.PAR; do
+       mv $f ${f:0:13}${f:17}
+    done
+    for f in *.REC; do
+        mv $f ${f:0:13}${f:17}
+    done
+    # if acquisition nr is 10 or higher, remove the extra number
+    for f in *_.PAR; do
+        mv $f ${f::(-5)}.PAR
+    done
+    for f in *_.REC; do
+        mv $f ${f::(-5)}.REC
+    done    
+ done
+ 
+ # subj without WIP in filename
+ for subj in 0905 0992 0993
+do    
+    Dir=/Fridge/users/susanne/derivatives/DWI/sub-RESP${subj}
+    cd $Dir/mrdata/DTI
+    # remove acuiqistion and reconstruction nr.
+    for f in *.PAR; do
+       mv $f ${f::(-8)}.PAR
+    done
+    for f in *.REC; do
+        mv $f ${f::(-8)}.REC
+    done    
+    # if acquisition nr is 10 or higher, remove the extra number
+    for f in *_.PAR; do
+        mv $f ${f::(-5)}.PAR
+    done
+    for f in *_.REC; do
+        mv $f ${f::(-5)}.REC
+    done   
+done
+
+# move only the necessary data from the raw data map ('DWI') to a designated preprocess map ('preprocess_DWI'), one folder is made for each subject
+
+for subj in 0703 0749 0753 0778 0856 0882 0905 0928 0968 0978 0984 0992 0993
+do    
+    Dir=/Fridge/users/susanne/derivatives/preprocess_DWI
+    cd $Dir
+    mkdir sub-RESP${subj}
+    # copy the DWI data into the folders
+    cp /Fridge/users/susanne/derivatives/DWI/sub-RESP${subj}/mrdata/DTI/{sub-RESP${subj}_MB3_sDTI_1600_4_AP.PAR,sub-RESP${subj}_MB3_sDTI_1600_4_AP.REC,sub-RESP${subj}_MB3_sDTI_1600_60_PA.PAR,sub-RESP${subj}_MB3_sDTI_1600_60_PA.REC} /Fridge/users/susanne/derivatives/preprocess_DWI/sub-RESP${subj}
+    # convert the DWI files (60_PA and 4_AP) from .PAR/REC to .mif format
+    cd $Dir/sub-RESP${subj}
+    mrconvert sub-RESP${subj}_MB3_sDTI_1600_60_PA.PAR dwi_raw.mif
+    mrconvert sub-RESP${subj}_MB3_sDTI_1600_4_AP.PAR dwi_raw_AP.mif
+done
+
+-----------------------------------------------------------------------
+SECTION 2 : preprocessing 'Designer' pipeline (did not use the designer code on github due to discrepances in output wanted but implemented the steps of their method, also using the BATMAN tutorial)
+-----------------------------------------------------------------------
+for subj in 0703 0749 0753 0778 0856 0882 0905 0928 0968 0978 0984 0992 0993
+do    
+    Dir=/Fridge/users/susanne/derivatives/preprocess_DWI
+    cd $Dir/sub-RESP${subj}
+    
+    # Denoising (MP-PCA)
+    
+    # estimate spatially varying noise map dwi_den.mif is denoised data
+    dwidenoise dwi_raw.mif dwi_den.mif -noise noise.mif -info  &> denoise_info.txt
+    # if large noise extent by -extent 7
+    mrcalc dwi_raw.mif dwi_den.mif -subtract residual.mif
+    
+    # Unringing (Gibbs ringing correction)
+    
+    mrdegibbs dwi_den.mif dwi_den_unr.mif -axes 0,1 -info  &> unringing_info.txt
+    mrcalc dwi_den.mif dwi_den_unr.mif -subtract residualUnringed.mif
+    
+    # Motion, (EPI) disortion correction, and b0 field inhomogeneity correction
+    
+    # extract b0 files from PA and calculate mean
+    dwiextract dwi_den_unr.mif - -bzero | mrmath - mean mean_b0_PA.mif -axis 3 
+    # extract b0 files from AP and calculate mean 
+    dwiextract sub-RESP${subj}_MB3_sDTI_1600_4_AP.PAR - -bzero| mrmath - mean mean_b0_AP.mif -axis 3
+    #unringing AP
+     mrdegibbs mean_b0_AP.mif mean_b0_AP_unr.mif -axes 0,1 -info  &> unringing_AP_info.txt
+    mrcalc mean_b0_AP.mif mean_b0_AP_unr.mif -subtract residualUnringed_AP.mif
+    mrcat mean_b0_PA.mif mean_b0_AP_unr.mif -axis 3 b0_pair.mif
+    #fsl EPI disortion correction, b0 field inhomogeneity correction (topup), eddy current and movement distortion correction
+    dwifslpreproc dwi_den_unr.mif dwi_den_unr_preproc.mif -nocleanup -pe_dir PA -rpe_pair -se_epi b0_pair.mif -eddy_options " --slm=none" -info &> dwifslpreproc_info.txt
+    mrcalc dwi_den_unr.mif dwi_den_unr_preproc.mif -subtract residualTopup.mif
+    
+    # b1 Bias field correction
+    
+    #check this step because can deteriorate brain mask estimation!
+    dwibiascorrect ants dwi_den_unr_preproc.mif dwi_den_unr_preproc_unbiased.mif -bias bias.mif -info  &> bias_info.txt
+    
+    # Brain mask estimation
+    
+    dwi2mask dwi_den_unr_preproc_unbiased.mif mask_den_unr_preproc_unb.mif -info
+done
+
+-----------------------------------------------------------------------
+SECTION 3 : check all the steps of the preprocessing to make sure it is performed correctly
+-----------------------------------------------------------------------
+    
+for subj in 0703 0749 0753 0778 0856 0882 0905 0928 0968 0978 0984 0992 0993
+do    
+    Dir=/Fridge/users/susanne/derivatives/preprocess_DWI
+    cd $Dir/sub-RESP${subj}   
+    
+    # Show raw b=0 PA and AP volumes
+    
+    mrview dwi_raw.mif -volume 60 -mode 2 -intensity_range 0,60000
+    mrview dwi_raw_AP.mif -volume 4 -mode 2 -intensity_range 0,60000
+    # for some patients the intensity_range 0 to 3000 fits better!
+       
+    # Denoising (MP-PCA) 
+    
+    # show noise and residual(difference between raw and denoised images)
+    mrview noise.mif -mode 2
+    mrview residual.mif -volume 60 -mode 2
+    
+    # Unringing (Gibbs ringing correction)
+    
+    # show unringed and residual volumes
+    mrview dwi_den_unr.mif residualUnringed.mif -mode 2 -volume 60 -intensity_range 0,60000
+    
+    # Motion, (EPI) disortion correction, and b0 field inhomogeneity correction
+    
+    # check difference between the two mean b0 files
+    mrview mean_b0_PA.mif -overlay.load mean_b0_AP.mif -overlay.colourmap 2 -overlay.opacity 0.5 -mode 2
+    mrview mean_b0_PA.mif mean_b0_AP.mif
+    # check residual 
+    mrview dwi_den_unr_preproc.mif residualTopup.mif -volume 60 -mode 2 -intensity_range 0,60000
+    
+    # Check how much corrupt slices are present
+    
+    cd dwifslpreproc-tmp-*
+totalSlices=`mrinfo dwi.mif | grep Dimensions | awk '{print $6 * $8}'`
+totalOutliers=`awk '{ for(i=1;i<=NF;i++)sum+=$i } END { print sum }' dwi_post_eddy.eddy_outlier_map`
+echo "If the following number is greater than 10, you may have to discard this subject because of too much motion or corrupted slices"
+echo "scale=5; ($totalOutliers / $totalSlices * 100)/1" | bc | tee percentageOutliers.txt
+cd $Dir/sub-RESP${subj}
+    
+    # b1 Bias field correction
+    
+    # the bias field correction can deteriorate brain mask estimation! So do not include if this is the case. 
+    mrview bias.mif -colourmap 2 -mode 2
+    
+    # Brain mask estimation
+    
+    # Make sure to double check the brain mask to see if the bias field correction deteriorated the brain mask or not. Check if the brain mask covers the whole brain and nothing more or less. 
+    mrview dwi_den_unr_preproc_unbiased.mif -overlay.load mask_den_unr_preproc_unb.mif -overlay.colourmap 2 -overlay.opacity 0.5 -mode 2 -volume 60 -mode 2 -intensity_range 0,60000
+    
+     # Compare the end result of the processing with the raw volumes
+    mrview dwi_den_unr_preproc_unbiased.mif -overlay.load dwi_raw.mif -overlay.colourmap 2 -overlay.opacity 0.5 -mode 2 -volume 60 -mode 2 -intensity_range 0,60000
+    
+done
+
+
+
+
+
+

@@ -1,0 +1,75 @@
+# visualize white matter tracts between two electrode contact areas
+for subj in 0703 
+do    
+    Dir=/Fridge/users/susanne/derivatives/tract2connectome_all
+    cd $Dir/sub-RESP${subj}
+    ch1=1 # channel number of the first electrode contact (must be the lowest of the two channels)
+    ch2=20 # channel number of the second electrode contact
+     
+    # define tractography parameters to open the right file with the correct parameters
+    file="total_volume.txt"
+    volume=$(cat ${file})
+    volume2=$(echo${volume}| awk '{printf("%d",$0+0.5)}')
+    seed_voxel=6000
+    seed=$((volume2*seed_voxel))
+    echo $seed 
+    step=1
+    angle=70
+    minlength=4
+    maxlength=400
+    cutoff=0.15
+    
+    # extract the electrode contact areas
+    mrcalc coordinate_all_connectome.mif ${ch1} -eq ${ch1}.mif
+    mrcalc coordinate_all_connectome.mif ${ch2} -eq ${ch2}.mif
+    
+    # extract the streamlines (white matter tracts) between the two electrode contact areas
+    connectome2tck -nodes ${ch1},${ch2} -exclusive tracks_backtrack_${subj}_${seed_voxel}_${step}_${angle}_${minlength}_${maxlength}_${cutoff}_${angle}.tck assignments_backtrack_${subj}_${seed_voxel}_${step}_${angle}_${minlength}_${maxlength}_${cutoff}_${angle}.txt ${subj}_${seed_voxel}_${step}_${angle}_${minlength}_${maxlength}_${cutoff}_connection
+    
+    # display the de-skulled MRI-DWI, the white matter tracts and the electrode contact areas
+    mrview  MRI_DWI_sub-RESP${subj}_coreg_noskull.mif  -tractography.load ${subj}_${seed_voxel}_${step}_${angle}_${minlength}_${maxlength}_${cutoff}_connection${ch1}-${ch2}.tck -tractography.colour 252,128,3 -mode 3 -overlay.load ${ch1}.mif -overlay.colour 3,207,252 -overlay.load ${ch2}.mif -overlay.colour 123,252,127     
+done
+ 
+# visualize white matter tracts between multiple electrode contacts and for multiple subjects
+ for subj in 0703 0749 0753 0778 0856 0882 0905 0928 0968 0978 0984 0992 0993
+do    
+    Dir=/Fridge/users/susanne/derivatives/tracts2connectome_all
+    cd $Dir/sub-RESP${subj}   
+    j=0
+    k=1
+    for i in $(cat ch1.csv) # excel file with the channels you want to visualize
+    do 
+        channel1[$j]=$i
+        j=$(( $j + $k ))
+    done 
+    
+    j=0
+    k=1
+    for i in $(cat ch2.csv) # excel file with the channels you want to visualize
+    do 
+        channel2[$j]=$i
+        j=$(( $j + $k ))
+    done 
+    
+    for i in {1..30}
+do
+    ch1=${channel1[$i]}
+    ch2=${channel2[$i]}
+    
+    # define tractography parameters to open the right file with the correct parameters    
+    file="total_volume.txt"
+    volume=$(cat ${file})
+    volume2=$(echo${volume}| awk '{printf("%d",$0+0.5)}')
+    seed_voxel=6000
+    seed=$((volume2*seed_voxel))
+    step=1
+    angle=70
+    minlength=4
+    maxlength=400
+    cutoff=0.15
+    
+    # display the de-skulled MRI-DWI, the white matter tracts and the electrode contact areas
+    mrview  MRI_DWI_sub-RESP${subj}_coreg_noskull.mif  -tractography.load ${subj}_${seed_voxel}_${step}_${angle}_${minlength}_${maxlength}_${cutoff}_connection${ch1}-${ch2}.tck -tractography.colour 17,145,250 -mode 3 # -fullscreen
+
+done
+done

@@ -1,0 +1,101 @@
+# STReEF04_fiber_tractography
+# compute the white matter fiber orientation distribution with the Multi-Shell Multi-Tissue CSD (MSMT-CSD) algorithm using two-tissue CSD
+# author: Susanne Jelsma
+# date: April 2022
+# prepare MRI and DWI data, and electrode contact area data, perform tractography, make a preliminary structural network, and visualize the white matter tracts
+
+-----------------------------------------------------------------------
+SECTION 1 : prepare MRI, DWI, and electrode contact area data
+-----------------------------------------------------------------------
+# move only the necessary data from the co-registration and roi definition folder ('coreg_ROI') and the fiber orientation distribution folder ('dwi2fod') to a designated fiber tractography folder ('tracts2connectome_all') ,one folder is made for each subject
+
+for subj in 0856 #0753 0968 0882 0984
+do    
+    Dir=/Fridge/users/susanne/derivatives/tract2connectome_all
+    cd $Dir #/sub-RESP${subj}
+    mkdir sub-RESP${subj}
+    
+    # copy the white matter fiber orientation distributions into the data folders
+    cp /Fridge/users/susanne/derivatives/dwi2fod/sub-RESP${subj}/wmfod.mif /Fridge/users/susanne/derivatives/tract2connectome_all/sub-RESP${subj}
+    
+    # copy the 5TT image (segmentation of the MRI-DWI in six binary brain masks containing cortical grey matter, subcortical grey matter, white matter, the grey-white matter boundary, cerebrospinal fluid (CSF), and if present, pathological tissue) and the grey-white matter mask into the data folders 
+    cp /Fridge/users/susanne/derivatives/coreg_ROI/sub-RESP${subj}/{5tt_mask.mif,gmwmSeed_mask.mif} /Fridge/users/susanne/derivatives/tract2connectome_all/sub-RESP${subj}
+
+    # copy the electrode contact area data suitable for use a seeding mask for tractograph (each voxel contains a value based on the magnitude of the gradient of the GM/WM partial volume images) into the data folders (roi template in mrtrix terms) 
+    cp /Fridge/users/susanne/derivatives/coreg_ROI/sub-RESP${subj}/coordinate_roi/coordinate_all_tckgen.mif /Fridge/users/susanne/derivatives/tract2connectome_all/sub-RESP${subj}
+      
+    # copy the electrode contact area data, with voxels values corresponding to their electrode contact coordinate index (unique number per electrode contact area), into the data folders (nodes-in template in mrtrix terms)
+    cp /Fridge/users/susanne/derivatives/coreg_ROI/sub-RESP${subj}/coordinate_roi/coordinate_all_connectome.mif /Fridge/users/susanne/derivatives/tract2connectome_all/sub-RESP${subj}
+
+    # copy the MRI-DWI (MRI acquired at the time of the DWI scan) into the data folders for visualization purposes
+    cp /Fridge/users/susanne/derivatives/coreg_ROI/sub-RESP${subj}/MRI_DWI_sub-RESP${subj}_coreg.mif /Fridge/users/susanne/derivatives/tract2connectome_all/sub-RESP${subj}
+
+    # copy the volume of all electrode contact areas combined, per patient, into the data folders (seeding volume in mrtrix terms)
+    cp /Fridge/users/susanne/derivatives/coreg_ROI/sub-RESP${subj}/coordinate_roi/total_volume.txt /Fridge/users/susanne/derivatives/tract2connectome_all/sub-RESP${subj}
+    
+    # copy the largest euclidian distance between two electrode contact areas into the data folders (max length in mrtrixt terms, not used?)
+    cp /Fridge/users/susanne/derivatives/coreg_ROI/sub-RESP${subj}/coordinate_roi/distances.txt /Fridge/users/susanne/derivatives/tract2connectome_all/sub-RESP${subj}
+
+done
+
+-----------------------------------------------------------------------
+SECTION 2 : perform tractography and make a preliminary structural network
+-----------------------------------------------------------------------
+# perform anatomical constrained probabilistic tractography using the electrode contact areas as seeding and termination masks, and the 5TT image as anatomical streamline propogation mask
+
+for subj in 0703 0749 0753 0778 0856 0882 0905 0928 0968 0978 0984 0992 0993
+do    
+    Dir=/Fridge/users/susanne/derivatives/tract2connectome_all
+    cd $Dir/sub-RESP${subj}
+    # get the volume to calculate how many seeds the tractography algorithm will attempt to track streamlines from
+    file="total_volume.txt"
+    volume=$(cat ${file})
+    volume2=$(echo${volume}| awk '{printf("%d",$0+0.5)}')
+    # define the seed density as 6000 seeds per voxel
+    seed_voxel=6000 
+    seed=$((volume2*seed_voxel))
+    echo $seed
+    
+     # put constraints on the path step size, diffusion strength (= fiber orientation distribution(FOD)-threshold), maximal curvature angle, minimal streamline length, and maximal streamline length. 
+    step=1 # path step size (mm) (how often the algorithm takes an independent sample from the FOD probability profile)
+    cutoff=0.15 # FOD-treshold (the minimal volume fraction of the FOD in a specific direction, thus diffusion strength, to allow tracking in that direction)
+    angle=70 # maximum curvature angle (degree) (the angle that is allowed between steps)
+    minlength=4 # minimal streamline length (mm)
+    maxlength=400 # maximal streamline length (mm)
+
+
+    # fiber tracking streamlines (white matter tracts) using the iFOD2 reconstruction algorithm
+    tckgen -algorithm iFOD2 -act 5tt_mask.mif -backtrack -seed_gmwmi coordinate_all_tckgen.mif -seeds ${seed} -select 0 -step ${step} -angle ${angle} -minlength ${minlength} -maxlength ${maxlength} -cutoff ${cutoff} -info -debug wmfod.mif tracks_backtrack_${subj}_${seed_voxel}_${step}_${angle}_${minlength}_${maxlength}_${cutoff}_${angle}.tck &> tracks_backtrack_${subj}_${seed_voxel}_${step}_${angle}_${minlength}_${maxlength}_${cutoff}_${angle}_info.txt
+    # backtrack: allow tracks to be truncated and re-tracked if a poor structural termination is encountered
+
+    # make a connectome matrix (preliminary structural network) from the streamline file (made with the iFOD2 algorithm) and a node parcellation image (the electrode contact areas) 
+    tck2connectome -symmetric -zero_diagonal -assignment_end_voxels -scale_invnodevol -info -debug tracks_backtrack_${subj}_${seed_voxel}_${step}_${angle}_${minlength}_${maxlength}_${cutoff}_${angle}.tck coordinate_all_connectome.mif connectome_backtrack_${subj}_${seed_voxel}_${step}_${angle}_${minlength}_${maxlength}_${cutoff}_${angle}.csv -out_assignments assignments_backtrack_${subj}_${seed_voxel}_${step}_${angle}_${minlength}_${maxlength}_${cutoff}_${angle}.txt &> connectome_backtrack_${subj}_${seed_voxel}_${step}_${angle}_${minlength}_${maxlength}_${cutoff}_${angle}_info.txt
+done
+
+-----------------------------------------------------------------------
+SECTION 3 : visualize the white matter tracts
+-----------------------------------------------------------------------
+# visualize the white matter tracts between the electrode contact areas reconstructed with the iFOD2 tractography algorithm
+
+# de-skull the MRI-DWI for visualization purposes using the brain extraction tool (bet) from the FSL toolbox
+for subj in 0703 0749 0753 0778 0856 0882 0905 0928 0968 0978 0984 0992 0993
+do    
+    Dir=/Fridge/users/susanne/derivatives/tract2connectome_all
+    cd $Dir/sub-RESP${subj}
+    mrconvert MRI_DWI_sub-RESP${subj}_coreg.mif MRI_DWI_sub-RESP${subj}_coreg.nii
+    bet MRI_DWI_sub-RESP${subj}_coreg.nii MRI_DWI_sub-RESP${subj}_coreg_noskull.nii -R 
+    mrconvert MRI_DWI_sub-RESP${subj}_coreg_noskull.nii.gz MRI_DWI_sub-RESP${subj}_coreg_noskull.mif # convert to mif. format
+    
+    # check the de-skulled MRI
+    mrview MRI_DWI_sub-RESP${subj}_coreg_noskull.mif -mode 3 
+done
+
+# visualize white matter tracts between two electrode contact areas
+# this is done with a function: STReEF04_function_visualize_tracts to be able to quickly run a whole file
+# run this line into the terminal:
+
+bash /home/susanne/GitRep/umcuEpi_DTI_wisselbranchencommit/scripts/STReEF04_function_visualize_tracts
+
+
+
+
