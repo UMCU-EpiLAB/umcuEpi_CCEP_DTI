@@ -11,13 +11,13 @@ SECTION 1 : prepare MRI and DWI data
 
 for subj in 0703 0749 0753 0778 0856 0882 0905 0928 0968 0978 0984 0992 0993
 do    
-    Dir=/Fridge/users/susanne/derivatives/dwi2fod
+    Dir=dwi2fod
     cd $Dir
     mkdir sub-RESP${subj}
     # copy the processed DWI data and brain mask into the data folders
-    cp /Fridge/users/susanne/derivatives/preprocess_DWI/sub-RESP${subj}/{dwi_den_unr_preproc_unbiased.mif,mask_den_unr_preproc_unb.mif} /Fridge/users/susanne/derivatives/dwi2fod/sub-RESP${subj}
+    cp *Preprocess_DWI*/{dwi_den_unr_preproc_unbiased.mif,mask_den_unr_preproc_unb.mif} *dwi2fod*
      # copy the 5TT image (segmentation of the MRI-DWI in six binary brain masks containing cortical grey matter, subcortical grey matter, white matter, the grey-white matter boundary, cerebrospinal fluid (CSF), and if present, pathological tissue) into the data folders
-    cp /Fridge/users/susanne/derivatives/coreg_ROI/sub-RESP${subj}/5tt_mask.mif /Fridge/users/susanne/derivatives/dwi2fod/sub-RESP${subj}
+    cp *coreg_ROI*/5tt_mask.mif *dwi2fod*
 done
 
 -----------------------------------------------------------------------
@@ -25,7 +25,7 @@ SECTION 2 : compute the fiber orientation distributions
 -----------------------------------------------------------------------
 for subj in 0703 0749 0753 0778 0856 0882 0905 0928 0968 0978 0984 0992 0993
 do    
-    Dir=/Fridge/users/susanne/derivatives/dwi2fod
+    Dir=dwi2fod
     cd $Dir/sub-RESP${subj}
     # estimate the response function from the DWI data for constrained spherical deconvolution (CSD) with the dHollander algorithm
     dwi2response dhollander dwi_den_unr_preproc_unbiased.mif wm.txt gm.txt csf.txt -voxels voxels.mif -info  &> dhollander.txt
@@ -43,7 +43,7 @@ SECTION 3 : check the fiber orientation distributions
 # check the estimated response function
 for subj in 0703 0749 0753 0778 0856 0882 0905 0928 0968 0978 0984 0992 0993
 do    
-    Dir=/Fridge/users/susanne/derivatives/dwi2fod
+    Dir=dwi2fod # see personalDataPath_mrtrix file for the exact dir 
     cd $Dir/sub-RESP${subj}
     mrview dwi_den_unr_preproc_unbiased.mif -overlay.load voxels.mif # check the voxels used by the algorithm for the estimation of the response function
     shview wm.txt # response function for white matter
@@ -54,7 +54,7 @@ do
 # check if the white matter fiber orientation distribution consist of only fiber orientation distributions in anatomical appropiate regions   
 for subj in 0703 0749 0753 0778 0856 0882 0905 0928 0968 0978 0984 0992 0993
 do    
-    Dir=/Fridge/users/susanne/derivatives/dwi2fod
+    Dir=dwi2fod
     cd $Dir/sub-RESP${subj}
     mrview vf.mif -odf.load_sh wmfod.mif -fov 100 # the two-tissue CSD makes this result not perfect, however our DWI data properties did not allow to perform three-tissue CSD
 done
