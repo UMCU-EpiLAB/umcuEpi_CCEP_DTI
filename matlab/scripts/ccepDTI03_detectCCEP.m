@@ -19,6 +19,7 @@ myDataPath = setLocalDataPath(cfg);
 sub_label = input('Patient number (RESPXXXX) (select multiple patients by separating each with a comma): ','s');
 
 cfg.sub_label = strsplit(sub_label,{', ',','});
+%cfg.ses_label = 2;
 
 cfg = selectPatients(cfg, myDataPath);
 
@@ -29,7 +30,7 @@ dataBase = load_ECoGdata(myDataPath,cfg);
 disp('All ECoGs are loaded')
 
 %% preprocessing CCEP in ECoG
-clear cfg
+%clear cfg
 
 % preprocessing step
 cfg.dir = 'no'; % if you want to take negative/positive stimulation into account
@@ -42,6 +43,15 @@ cfg.epoch_prestim = 2;
 dataBase = preprocess_ECoG(dataBase, cfg);
 
 disp('All ECoGs are preprocessed')
+%% seizures?
+for subj = 1:size(dataBase,2)
+    for run = 1:size(dataBase(subj).metadata,2)
+if sum(strcmp(dataBase(subj).metadata(run).tb_events.trial_type,'seizure'))
+    disp('seizure alert')
+    disp(subj)
+end
+    end
+end
 
 %% rereference data
 % find 10 signals in the same trial with lowest variance and not being a
@@ -78,30 +88,35 @@ else
 end
 
 %% detect CCEPs
+% 
+% % set correct parameters for detection of CCEPs in sEEG/ECoG
 
-% set correct parameters for detection of CCEPs in sEEG/ECoG
-
-% TODO: in the function detect_n1peak_ccep, all subjects and runs in the
-% dataBase are run, but the  next few lines for setting parameters are only
-% for one subject (when you would load several subjects...), because you
-% could load both sEEG and ECoG patients in one database, and then
-% different parameters might be necessary.
+for subj = 1:size(dataBase,2)
 if all(strcmpi(dataBase(subj).metadata(1).tb_channels.type,'SEEG')==1)
-    % to be determined in the previous step
-
-elseif all(strcmpi(dataBase(subj).metadata(1).tb_channels.type,'ECoG')==1) % CHECK: im not sure that it is ECoG in type in ECoG data...
-    cfg.amplitude_thresh = 2.6;
+    % determined in the developmental part of this project
+    cfg.amplitude_thresh = 3.5; 
     cfg.n1_peak_range = 100;
+    cfg.minSD = 16;
+    cfg.sel = 0;
+    dataBase(subj) = detect_n1peak_ccep(dataBase(subj), cfg);
+    disp('seeg')
+elseif all(strcmpi(dataBase(subj).metadata(1).tb_channels.type,'ECOG')==1) 
+    cfg.amplitude_thresh = 2.6; % for conservative algorithm amplitude treshold of 2.8/3.4/2.6/2.5 (paper dorien) recommended, staat overal anders!
+    % since we want a sensitive algorithm we choose 2.6
+    cfg.n1_peak_range = 100;
+    cfg.minSD = 50;
+    cfg.sel = 20;
+    dataBase(subj) = detect_n1peak_ECoG_ccep(dataBase(subj), cfg);
+    disp('grid')
+end
 end
 
-dataBase = detect_n1peak_ECoG_ccep(dataBase, cfg);
 
 disp('All CCEPs are detected')
 
-
 %% visually check detected ccep
+%check only the detected ccep's!
 close all
-
 % select subject
 subs = {dataBase(:).sub_label};
 string = [repmat('%s, ',1,size(subs,2)-1), '%s'];
@@ -111,7 +126,6 @@ subj = find(contains({dataBase(:).sub_label},substring));
 if isempty(subj)
    error('No present subject was selected') 
 end
-
 % select run if multiple runs
 if size(dataBase(subj).metadata,2)>1
     runs = {dataBase(subj).metadata(:).run_label};
@@ -127,13 +141,13 @@ else
 end
 
 % load checked N1s if visual rating has started earlier
-if exist(fullfile(myDataPath.CCEPpath, dataBase(subj).sub_label, ...
+if exist(fullfile(myDataPath.CCEPpath3, dataBase(subj).sub_label, ...
         dataBase(subj).ses_label, dataBase(subj).metadata(run).run_label,...
         [dataBase(subj).sub_label, '_', dataBase(subj).ses_label,'_',...
         dataBase(subj).metadata(run).task_label,'_',...
         dataBase(subj).metadata(run).run_label,'_N1sChecked.mat']),'file')
     
-   dataBase(subj).metadata(run).ccep = load(fullfile(myDataPath.CCEPpath, ...
+   dataBase(subj).metadata(run).ccep = load(fullfile(myDataPath.CCEPpath3, ...
        dataBase(subj).sub_label,dataBase(subj).ses_label, dataBase(subj).metadata(run).run_label,...
         [dataBase(subj).sub_label, '_', dataBase(subj).ses_label,'_',...
         dataBase(subj).metadata(run).task_label,'_',...
@@ -151,18 +165,24 @@ else
     endstimp = 0;
 end
 
-% visual rating
-dataBase = visualRating_ccep(dataBase,myDataPath,subj,run,cfg,endstimp);
-
+% nog geen verschil tussen de visualratings,
+if all(strcmpi(dataBase(subj).metadata(1).tb_channels.type,'SEEG')==1)
+    dataBase = visualRating_ccep_seeg(dataBase,myDataPath,subj,run,cfg,endstimp);
+    disp('seeg')
+elseif all(strcmpi(dataBase(subj).metadata(1).tb_channels.type,'ECOG')==1) 
+    dataBase = visualRating_ccep_seeg(dataBase,myDataPath,subj,run,cfg,endstimp);
+    disp('grid')
+end
 % write down whether you only checked the presence of an ER (write down
 % ER), or also the location of the N1-peak (write down N1)
 cfg.check_ER_N1 = input('Did you only check the presence of a CCEP, or also the location of the N1-peak? [CCEP/N1]: ','s');
 
 %% save ccep
 
-for subj = 1:size(dataBase,2)
-    for run = 1:size(dataBase(subj).metadata,2)
-        targetFolder = fullfile(myDataPath.CCEPpath, dataBase(subj).sub_label,dataBase(subj).ses_label,dataBase(subj).metadata(run).run_label);
+%for subj = 1:size(dataBase,2)
+for subj=1 %0978
+    for run = 1:size(dataBase(subj).metadata,2) %verander weer naar 1!
+        targetFolder = fullfile(myDataPath.CCEPpath3, dataBase(subj).sub_label,dataBase(subj).ses_label,dataBase(subj).metadata(run).run_label);
         
         % Create the folder if it doesn't exist already.
         if ~exist(targetFolder, 'dir')
