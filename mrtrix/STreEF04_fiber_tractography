@@ -71,6 +71,7 @@ do
 
     # make a connectome matrix (preliminary structural network) from the streamline file (made with the iFOD2 algorithm) and a node parcellation image (the electrode contact areas) 
     tck2connectome -symmetric -zero_diagonal -assignment_end_voxels -scale_invnodevol -info -debug tracks_backtrack_${subj}_${seed_voxel}_${step}_${angle}_${minlength}_${maxlength}_${cutoff}_${angle}.tck coordinate_all_connectome.mif connectome_backtrack_${subj}_${seed_voxel}_${step}_${angle}_${minlength}_${maxlength}_${cutoff}_${angle}.csv -out_assignments assignments_backtrack_${subj}_${seed_voxel}_${step}_${angle}_${minlength}_${maxlength}_${cutoff}_${angle}.txt &> connectome_backtrack_${subj}_${seed_voxel}_${step}_${angle}_${minlength}_${maxlength}_${cutoff}_${angle}_info.txt
+    # this values in this matrix are the streamline density (the number of streamlines divided by the volume of the two involved electrode contact areas) 
 done
 
 -----------------------------------------------------------------------
