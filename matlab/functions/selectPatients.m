@@ -25,7 +25,7 @@ for subj = 1:size(cfg.sub_label,2)
     % select one session if only one session is available
     if size(sesfiles,1) <1
         error('Pathname %s does not contain any files',fullfile(myDataPath.dataPath,['sub-' cfg.sub_label{subj}]))
-    elseif size(sesfiles,1) == 1
+    elseif size(sesfiles,2) == 1
         cfg.ses_label{subj} = sesfiles{1};
     else
         cfg.ses_label{subj} = input(sprintf(['Select one of these sessions [',string,']: \n'],sesfiles{:}),'s');
