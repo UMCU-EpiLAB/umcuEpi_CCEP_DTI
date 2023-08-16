@@ -24,7 +24,7 @@ myDataPath = setLocalDataPath(cfg);
 %% patient characteristics
 %search for the SPES patients who have a DWI scan
 
-files = dir(myDataPath.DWIpath);
+files = dir(myDataPath.DWIpath); % path to the folder with the processed DWI's
 files(1:2) = [];
 sub_label = cell(1,size(files,1));
 for subj=1:size(files,1)
@@ -173,14 +173,14 @@ flags.graphics = ~spm('CmdLine');
 
 sub_label = dataBase(subj).sub_label;
 
-dir = [myDataPath.coreg_ROIpath sprintf('%s/',sub_label)]; % path to the designated co-registration and roi definition map ('coreg_ROI') 
+dir = [myDataPath.coreg_ROIpath sprintf('%s/',sub_label)]; % path to the designated co-registration and roi definition folder ('coreg_ROI') 
 reference = [dir 'mean_b0_preprocessed.nii'] ; % DWI data as reference image
 source = [dir sprintf('MRI_DWI_%s.nii',sub_label)]; % MRI-DWI data as source image
 
 x_dwi = spm_coreg(reference,source,flags); % check the co-registration in the spm window
 
 t_matrix_dwi=spm_matrix(x_dwi(:)'); % extract the transformation matrix
-save([dir 'transmatrix_dwi.txt'],'t_matrix_dwi','-ascii') % save the transformation matrix in the designated co-registration and roi definition map ('coreg_ROI')
+save([dir 'transmatrix_dwi.txt'],'t_matrix_dwi','-ascii') % save the transformation matrix in the designated co-registration and roi definition folder ('coreg_ROI')
 dataBase(subj).metadata.transmatrix_dwi = t_matrix_dwi; % save the transformation matrix in the dataBase for inspection and further use
 end
 clear elec_indx sub_label source reference flags 
@@ -199,14 +199,14 @@ flags.graphics = ~spm('CmdLine');
 
 sub_label = dataBase(subj).sub_label;
 
-dir = [myDataPath.coreg_ROIpath sprintf('%s/',sub_label)]; % path to the designated co-registration and roi definition map ('coreg_ROI') 
+dir = [myDataPath.coreg_ROIpath sprintf('%s/',sub_label)]; % path to the designated co-registration and roi definition folder ('coreg_ROI') 
 reference = [dir sprintf('MRI_DWI_%s_coreg.nii',sub_label)]; % MRI-DWI data as reference image
 source = [dir sprintf('%s_ses-1_T1w.nii',sub_label)]; % MRI-CT data as source image
 
 x_mri = spm_coreg(reference,source,flags); %check the co-registration in the spm window
 
 t_matrix_mri=spm_matrix(x_mri(:)');
-save([dir 'transmatrix_mri.txt'],'t_matrix_mri','-ascii') % save the transformation matrix in the designated co-registration and roi definition map ('coreg_ROI')
+save([dir 'transmatrix_mri.txt'],'t_matrix_mri','-ascii') % save the transformation matrix in the designated co-registration and roi definition folder ('coreg_ROI')
 dataBase(subj).metadata.transmatrix_mri = t_matrix_mri; % save the transformation matrix in the dataBase for inspection and further use
 end
 clear elec_indx sub_label source reference flags 
@@ -244,7 +244,7 @@ dataBase(subj).metadata.coordinates_trans_mri = coordinates_trans;
 
 % make volumes to check if the electrode contact coordinates are transformed correctly
 sub_label = dataBase(subj).sub_label;
-dir = [myDataPath.coreg_ROIpath sprintf('%s/',sub_label)]; % path to the designated co-registration and roi definition map ('coreg_ROI') 
+dir = [myDataPath.coreg_ROIpath sprintf('%s/',sub_label)]; % path to the designated co-registration and roi definition folder ('coreg_ROI') 
 CT_BIDS = [dir sprintf('CT_BIDS_%s_coreg.nii',sub_label)]; 
 MRI_DWI = [dir sprintf('MRI_DWI_%s_coreg.nii',sub_label)];
 DWI = [dir 'mean_b0_preprocessed.nii'];
@@ -270,7 +270,7 @@ warning('make sure you have the grey-white matter boundary  mask in the right di
 
 for subj=1:size(dataBase,2)
 sub_label = dataBase(subj).sub_label;
-dir = [myDataPath.coreg_ROIpath sprintf('%s/',sub_label)]; % path to the designated co-registration and roi definition map ('coreg_ROI') 
+dir = [myDataPath.coreg_ROIpath sprintf('%s/',sub_label)]; % path to the designated co-registration and roi definition folder ('coreg_ROI') 
 gmwm_mask = read_mrtrix ([dir 'gmwmSeed_mask.mif']); % the grey-white matter boundary mask
 
 % extract the coordinates of the grey-white matter boundary mask
@@ -354,7 +354,7 @@ warning('make sure you also run the final section of the twin written in mrtrix 
 %% compute the distances between the electrode contact areas, not used in the end I guess?
 for subj=1:size(dataBase,2)
 sub_label = dataBase(subj).sub_label;
-dir = [myDataPath.coreg_ROIpath sprintf('%s/',sub_label)]; % path to the designated co-registration and roi definition map ('coreg_ROI') 
+dir = [myDataPath.coreg_ROIpath sprintf('%s/',sub_label)]; % path to the designated co-registration and roi definition folder ('coreg_ROI') 
 dir2 = [dir 'coordinate_roi/']; % path to a sub-folder of the designated co-registration and roi definition folder ('coordinate_roi') (made for clarity, not necessary?)
 rois = read_mrtrix ([dir2 'coordinate_all_connectome.mif']); % path to the electrode contact area data
 roi_elec = rois.data;
