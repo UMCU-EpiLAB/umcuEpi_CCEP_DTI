@@ -47,8 +47,8 @@ patients <- c('RESP0703','RESP0749','RESP0753','RESP0778','RESP0856','RESP0882',
 for (pat in patients)
 { 
 i <- i+1
-datapath_dwi <- sprintf("*dwi_matlab*/sub-%s/SC_matrix_dwi_soz",pat) # see personalDataPath_mrtrix file for the exact dir (**)
-datapath_ccep <- sprintf("*dwi_matlab*/sub-%s/SC_matrix_ccep_soz",pat)
+datapath_dwi <- sprintf("*dwi_matlab*/sub-%s/SC_matrix_dwi",pat) # see personalDataPath_mrtrix file for the exact dir (**)
+datapath_ccep <- sprintf("*dwi_matlab*/sub-%s/SC_matrix_ccep",pat)
 dwi <- read.table(datapath_dwi) # structural network
 spes <- read.table(datapath_ccep) # effective network
 dwi2 <- as.matrix(dwi)
