@@ -5,91 +5,9 @@
 # anonymize & unify DWI data, denoise DWI data and correct for common distortions following the 'Designer' pipeline proposed by Ades-Aron et al. 2018: Marchenko-Pastur Principal Component Analysis (MP-PCA) denoising, Gibbs ringing correction, EPI distortion correction, Eddy current correction, movement distortion correction, b0 field inhomogeneity correction, b1 bias field correction, and brain mask estimation, save the processed DWI data for further analysis, display and check the DWI data
 
 -----------------------------------------------------------------------
-SECTION 1 : anonymize & unify DWI data
+SECTION 1 : anonymize & unify DWI data ( there is more code for this but not necesarry if you use the data in the 'DATA_for_publication' folder)
 -----------------------------------------------------------------------
-# name all patient folders with their sub-RESP name by hand
-
-# view the raw DWI data of each subject
-
-for subj in 0703 0749 0753 0778 0856 0882 0905 0928 0968 0978 0984 0992 0993
-do    
-    Dir=DWI # see personalDataPath_mrtrix file for the exact dir (*DWI*)
-    cd $Dir/mrdata/DTI
-    for_each sub-RESP${subj}_MB3_sDTI_1600_60_PA.PAR : mrview IN
-done
-
-# change the patient name and birthdate in the fileames to their RESP nr. (you only need to run this once)
-
-for subj in 0703 0749 0753 0778 0856 0882 0905 0928 0968 0978 0984 0992; do
-    Dir=DWI
-    cd $Dir/mrdata/DTI
-    for f in *.PAR; do
-        mv $f ${f:10}
-    donef
-
-
-    for f in *.PAR; do
-    mv "$f" "sub-RESP${subj}${f}"
-    done
-    for f in *.REC; do
-        mv $f ${f:10}
-    done
-
-    for f in *.REC; do
-    mv "$f" "sub-RESP${subj}${f}"
-    done
-done
-
-# remove some information about the aquisitions to unify the filenames to ease further analysis. Information to be removed: use of WIP, acquisition and reconstruction nr. 
-
-for subj in 0749 0778 0856 0882 0928 0968 0978 0703 0753 0984 ; do
-    Dir=DWI
-    cd $Dir/mrdata/DTI
-    # remove acuiqistion and reconstruction nr.
-    for f in *.PAR; do
-       mv $f ${f::(-8)}.PAR
-    done
-     for f in *.REC; do
-        mv $f ${f::(-8)}.REC
-    done   
-    # remove WIP 
-    for f in *.PAR; do
-       mv $f ${f:0:13}${f:17}
-    done
-    for f in *.REC; do
-        mv $f ${f:0:13}${f:17}
-    done
-    # if acquisition nr is 10 or higher, remove the extra number
-    for f in *_.PAR; do
-        mv $f ${f::(-5)}.PAR
-    done
-    for f in *_.REC; do
-        mv $f ${f::(-5)}.REC
-    done    
- done
- 
- # subj without WIP in filename
- for subj in 0905 0992 0993
-do    
-    Dir=DWI
-    cd $Dir/mrdata/DTI
-    # remove acuiqistion and reconstruction nr.
-    for f in *.PAR; do
-       mv $f ${f::(-8)}.PAR
-    done
-    for f in *.REC; do
-        mv $f ${f::(-8)}.REC
-    done    
-    # if acquisition nr is 10 or higher, remove the extra number
-    for f in *_.PAR; do
-        mv $f ${f::(-5)}.PAR
-    done
-    for f in *_.REC; do
-        mv $f ${f::(-5)}.REC
-    done   
-done
-
-# move only the necessary data from the raw data map ('DWI') to a designated preprocess map ('preprocess_DWI'), one folder is made for each subject
+# move only the necessary data from the raw data map ('DATA_for_publication') to a designated preprocess map ('preprocess_DWI'), one folder is made for each subject
 
 for subj in 0703 0749 0753 0778 0856 0882 0905 0928 0968 0978 0984 0992 0993
 do    
@@ -97,11 +15,7 @@ do
     cd $Dir
     mkdir sub-RESP${subj}
     # copy the DWI data into the folders
-    cp *DWI*/mrdata/DTI/{sub-RESP${subj}_MB3_sDTI_1600_4_AP.PAR,sub-RESP${subj}_MB3_sDTI_1600_4_AP.REC,sub-RESP${subj}_MB3_sDTI_1600_60_PA.PAR,sub-RESP${subj}_MB3_sDTI_1600_60_PA.REC} *Preprocess_DWI*
-    # convert the DWI files (60_PA and 4_AP) from .PAR/REC to .mif format
-    cd $Dir/sub-RESP${subj}
-    mrconvert sub-RESP${subj}_MB3_sDTI_1600_60_PA.PAR dwi_raw.mif
-    mrconvert sub-RESP${subj}_MB3_sDTI_1600_4_AP.PAR dwi_raw_AP.mif
+    cp *DATA_for_publication*/sub-RESP${subj}/{DWI_sub-RESP${subj}.mif,DWI_sub-RESP${subj}_AP.mif} *Preprocess_DWI*/sub-RESP${subj}
 done
 
 -----------------------------------------------------------------------
@@ -115,9 +29,9 @@ do
     # Denoising (MP-PCA)
     
     # estimate spatially varying noise map dwi_den.mif is denoised data
-    dwidenoise dwi_raw.mif dwi_den.mif -noise noise.mif -info  &> denoise_info.txt
+    dwidenoise DWI_sub-RESP${subj}.mif dwi_den.mif -noise noise.mif -info  &> denoise_info.txt
     # if large noise extent by -extent 7
-    mrcalc dwi_raw.mif dwi_den.mif -subtract residual.mif
+    mrcalc DWI_sub-RESP${subj}.mif dwi_den.mif -subtract residual.mif
     
     # Unringing (Gibbs ringing correction)
     
@@ -159,8 +73,8 @@ do
     
     # Show raw b=0 PA and AP volumes
     
-    mrview dwi_raw.mif -volume 60 -mode 2 -intensity_range 0,60000
-    mrview dwi_raw_AP.mif -volume 4 -mode 2 -intensity_range 0,60000
+    mrview DWI_sub-RESP${subj}.mif -volume 60 -mode 2 -intensity_range 0,60000
+    mrview DWI_sub-RESP${subj}.mif -volume 4 -mode 2 -intensity_range 0,60000
     # for some patients the intensity_range 0 to 3000 fits better!
        
     # Denoising (MP-PCA) 
@@ -202,7 +116,7 @@ cd $Dir/sub-RESP${subj}
     mrview dwi_den_unr_preproc_unbiased.mif -overlay.load mask_den_unr_preproc_unb.mif -overlay.colourmap 2 -overlay.opacity 0.5 -mode 2 -volume 60 -mode 2 -intensity_range 0,60000
     
      # Compare the end result of the processing with the raw volumes
-    mrview dwi_den_unr_preproc_unbiased.mif -overlay.load dwi_raw.mif -overlay.colourmap 2 -overlay.opacity 0.5 -mode 2 -volume 60 -mode 2 -intensity_range 0,60000
+    mrview dwi_den_unr_preproc_unbiased.mif -overlay.load DWI_sub-RESP${subj}.mif -overlay.colourmap 2 -overlay.opacity 0.5 -mode 2 -volume 60 -mode 2 -intensity_range 0,60000
     
 done
 
