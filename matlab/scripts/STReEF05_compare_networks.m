@@ -309,6 +309,8 @@ SC_matrix_dwi = load([dir1 dataName]);
 % check if the sizes of the effective and prelimary structural network are the same
 if size(SC_matrix_dwi,2) ~= size(dataBase(subj).ccep.EC_matrix,2)
 disp(subj)
+cor_size = size(dataBase(subj).ccep.EC_matrix,2); % is not the same for 5 patients due to one high number in the coordinate_all_connectome.mif file which expanded the matrix with a lot of zeros. I need to figure out why this high number is in the file and fix it in the STReEF02 code.
+SC_matrix_dwi = SC_matrix_dwi(1:cor_size,1:cor_size); % for now, workaway by making both the structural and effective networks the same size. Check first if the size difference is really due to the problem described above.
 end
 
 dataBase(subj).dwi.SC_matrix_values = SC_matrix_dwi; 
@@ -367,6 +369,7 @@ end
 dataBase(subj).soz_ind_ch = soz_ind_ch; % indeces of the soz channels when counting with all channels
 dataBase(subj).elec_ind = elec_ind; % indeces of the included channels when counting with all channels
 end
+disp('SOZ channels defined')
 clear ch ch_include elec_include indx s elec_in elec_ind subj soz_ind_ch soz soz_in soz_include 
 
 %% SECTION 3: caculate the inter-modal similarity and prepare for the Jaccard Index calculation in R
@@ -377,8 +380,8 @@ sub_label = erase(dataBase(subj).sub_label,'sub-RESP');
 dir_SC = ['/Fridge/users/susanne/derivatives/dwi_matlab/' dataBase(subj).sub_label];
 a = dataBase(subj).dwi.SC_matrix;
 b =  dataBase(subj).ccep.EC_matrix;  
-save([dir_SC '/SC_matrix_dwi'],'a','-ascii') % save the structural network
-save([dir_SC '/SC_matrix_ccep'],'b','-ascii') % save the effective network
+% % save([dir_SC '/SC_matrix_dwi'],'a','-ascii') % save the structural network
+% % save([dir_SC '/SC_matrix_ccep'],'b','-ascii') % save the effective network
 JI(subj) = sum(sum(a & b))/sum(sum(a | b)); % calculate the Jaccard Index to be able to compare it with the Jaccard Index calculated with R
 end
 sub_labels = cfg.sub_label;
@@ -394,9 +397,42 @@ IQR_grid = iqr(JI_grid.Var2)
 prctile(JI_grid.Var2,[25 75])
 prctile(JI_seeg.Var2,[25 75])
 
-result_JI = table( [round(JI,2);median(JI);prctile(JI,[25 75])']); % present the statisctics of the Jaccard Index in a table
+result_JI = table( [round(JI,2);median(JI);prctile(JI,[25 75])']); % present the statistics of the Jaccard Index in a table
 
-clear grid seeg sub_label sub_labels subj dir_SC a b IQR_grid IQR_seeg median_grid median_seeg %JI
+
+% calculate expected Jaccard to check with R
+JI_expected = zeros(size(dataBase,2,1));
+JI_parker = zeros(size(dataBase,2,1));
+JI_alternative = zeros(size(dataBase,2,1));
+for subj=1:size(dataBase,2)
+    EC_matrix = dataBase(subj).ccep.EC_matrix;
+    SC_matrix = dataBase(subj).dwi.SC_matrix;
+
+    pis= size(EC_matrix(EC_matrix==1),1)/(size(EC_matrix,1)*size(EC_matrix,1)); % calculation how it matches the R calculation, do we agree with this?
+    pjs = size(SC_matrix(SC_matrix==1),1)/(size(SC_matrix,1)*size(SC_matrix,1));
+    JI_expected(subj) = (pis*pjs)/((pis+pjs)-(pis*pjs)); 
+    
+    % how I now think we should calculate it:
+    n_EC = size(EC_matrix,1); % number of nodes
+    p_EC= (n_EC*(n_EC-1))/2; % potential connections is (n*(n-1))/2)
+    a_EC = size(EC_matrix(EC_matrix==1),1);
+
+    n_SC = size(SC_matrix,1); % number of nodes
+    p_SC= (n_SC*(n_SC-1))/2; % potential connections is (n*(n-1))/2)
+    a_SC = size(SC_matrix(SC_matrix==1),1); % actual connections
+
+    d_EC = a_EC/p_EC ;  % density is actual connections/potential connections
+    d_SC = a_SC/p_SC ;  % density is actual connections/potential connections
+
+    JI_alternative(subj) = (d_EC*d_SC)/(d_SC + d_EC -(d_EC*d_SC)); % this results in very high expected JI's
+    JI_parker(subj) = (d_EC*d_SC)/(d_EC+d_SC); % this is how Christopher Parker explained it to me via email (https://www.sciencedirect.com/science/article/pii/S221315821730325X?via%3Dihub)
+end
+
+JIs_expected = round([JI_expected([1,6,8,9,10]);JI_expected([2,3,4,5,7,11,12,13])],2); % present it in the order of the paper, first grid, then sEEG
+JIs_alternative = round([JI_alternative([1,6,8,9,10]);JI_alternative([2,3,4,5,7,11,12,13])],2); 
+JIs_parker = round([JI_parker([1,6,8,9,10]);JI_parker([2,3,4,5,7,11,12,13])],2); 
+
+clear grid seeg sub_label sub_labels subj dir_SC a b IQR_grid IQR_seeg median_grid median_seeg n_EC p_EC a_EC d_EC n_SC p_SC a_SC d_SC pis pjs EC_matrix SC_matrix%JI_alternative JI_parker JI
 %% R warning
 warning('run now R code in STReEF05_compare_networks_R and run section 1)')
 %% SECTION 4: calculate the network topography
