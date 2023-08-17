@@ -15,7 +15,7 @@ do
     cd $Dir
     mkdir sub-RESP${subj}
     # copy the DWI data into the folders
-    cp *DATA_for_publication*/sub-RESP${subj}/{DWI_sub-RESP${subj}.mif,DWI_sub-RESP${subj}_AP.mif} *Preprocess_DWI*/sub-RESP${subj}
+    cp *DATA_for_publication*/sub-RESP${subj}/{DWI_sub-RESP${subj}.mif,DWI_sub-RESP${subj}_AP.mif,sub-RESP${subj}_MB3_sDTI_1600_4_AP.PAR,sub-RESP${subj}_MB3_sDTI_1600_4_AP.REC} *Preprocess_DWI*/sub-RESP${subj}
 done
 
 -----------------------------------------------------------------------
