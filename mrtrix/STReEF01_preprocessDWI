@@ -85,7 +85,7 @@ do
     
     # Unringing (Gibbs ringing correction)
     
-    # show unringed and residual volumes
+    # show unringed and residual volumes (change between the volumes with page up and page down!)
     mrview dwi_den_unr.mif residualUnringed.mif -mode 2 -volume 60 -intensity_range 0,60000
     
     # Motion, (EPI) disortion correction, and b0 field inhomogeneity correction
