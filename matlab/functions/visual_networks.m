@@ -28,8 +28,8 @@ for x=1:size(matrix_m1,1)
 end
 set(gca,'XTick',[])
 set(gca,'YTick',[])
-xlabel(sprintf('Electrode area 1-%.2g',size(matrix_m2,1)),'Fontsize',f)
-ylabel(sprintf('Electrode area 1-%.2g',size(matrix_m2,1)),'Fontsize',f)
+xlabel(sprintf('Electrode area 1-%.2d',size(matrix_m2,1)),'Fontsize',f)
+ylabel(sprintf('Electrode area 1-%.2d',size(matrix_m2,1)),'Fontsize',f)
 
 
 ax2 = subplot(1,3,2)
@@ -46,8 +46,8 @@ t = text(ax2,25*siz,-15*siz,sprintf('%s',sublabel));
 t.FontSize = 16;
 set(gca,'XTick',[])
 set(gca,'YTick',[])
-xlabel(sprintf('Electrode area 1-%.2g',size(matrix_m2,1)),'Fontsize',f)
-ylabel(sprintf('Electrode area 1-%.2g',size(matrix_m2,1)),'Fontsize',f)
+xlabel(sprintf('Electrode area 1-%.2d',size(matrix_m2,1)),'Fontsize',f)
+ylabel(sprintf('Electrode area 1-%.2d',size(matrix_m2,1)),'Fontsize',f)
 
 
 
@@ -72,8 +72,8 @@ for x=1:size(matrix_m1,1)
 end
 set(gca,'XTick',[])
 set(gca,'YTick',[])
-xlabel(sprintf('Electrode area 1-%.2g',size(matrix_m2,1)),'Fontsize',f)
-ylabel(sprintf('Electrode area 1-%.2g',size(matrix_m2,1)),'Fontsize',f)
+xlabel(sprintf('Electrode area 1-%.2d',size(matrix_m2,1)),'Fontsize',f)
+ylabel(sprintf('Electrode area 1-%.2d',size(matrix_m2,1)),'Fontsize',f)
 
 
 s1 = title(ax2,'Effective','Fontsize',f);
