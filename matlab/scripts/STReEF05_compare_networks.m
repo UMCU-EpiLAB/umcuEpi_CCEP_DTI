@@ -42,108 +42,18 @@ clear sub_label files i x subj
 
 cfg = selectPatients(cfg, myDataPath);
 
-%% load SOZ information 
-% Run this only once and save (information is loaded in next section)
-
-
-subj = 1; % run this part for every subject
-ch = dataBase(subj).ccep.ch;
-elec_include = dataBase(subj).dwi.elec_include;
-soz_include = false(size(elec_include));
-
-% insert the SOZ as defined by 'bijlage 3' by hand ((we just have to insert this in the BIDS now I know how to do that)
-x1 = input(sprintf('Insert SOZ channels of subj %s:',dataBase(subj).sub_label),'s');
-x = strsplit(x1,{', ',','});
-for i = 1:size(x,2)
-x2 = x(i);
-loc = strcmpi(x2,ch);
-[ch_ind,~] = find(loc); % gaat om de row
-if ~isempty(ch_ind)
-if elec_include(ch_ind)
-    soz_include(ch_ind) = 1;
-else disp(sprintf('Channel %s not included',string(cellstr(x2)))) % warn if there is a channel not included
-end
-else disp(sprintf('Channel %s not found',string(cellstr(x2)))) % warn if there is a channel not found
-end
-end
-dataBase(subj).soz = soz_include;
-
-% save SOZ
-for subj = 1:size(dataBase,2)
-    targetFolder = fullfile(myDataPath.DWIMATLABpath,dataBase(subj).sub_label,dataBase(subj).ses_label);
-
-    % Create the folder if it doesn't exist already.
-    if ~exist(targetFolder, 'dir')
-        mkdir(targetFolder);
-    end
-    
-    start_filename = strfind(dataBase(subj).dwi.dataName,'/');
-    stop_filename = strfind(dataBase(subj).dwi.dataName,'_ieeg');
-    
-    fileName = [dataBase(subj).dwi.dataName(start_filename(end)+1:stop_filename-1),'_sozInfo.mat'];
-            
-    soz = struct();
-    soz.dataName = dataBase(subj).dwi.dataName;
-    soz.soz_include = dataBase(subj).soz;
-   
-    save(fullfile(targetFolder,fileName), '-struct','soz');
-    fprintf('Saved soz in %s \n',fullfile(targetFolder,fileName))
-end
-
 %% load processed electrode contact area data (see STReEF02_coreg_roidef_mrtrix) and visual scored CCEP data (see umcuEpi_CCEP_DTI (main)/matlab/scripts/ccepDTI03_detectCCEP.m for scoring CCEP data)
-% merge runs: if size(cfg.run_label{subj},2) > 1
-dataPath = myDataPath.CCEP;
-dataPath2 = myDataPath.DWIMATLABpath;
-dataBase = struct([]);
-for subj = 1:size(cfg.sub_label,2)
-    sub_label = ['sub-' cfg.sub_label{subj}];
-    ses_label = cfg.ses_label{subj};
-    task_label = cfg.task_label{subj};
-    run_label_dwi = cfg.run_label{subj}{1}; % er is maar een dwi per subj, zo is het opgeslagen beetje onhandig
-    
-    % load dwiInfo + sozInfo which contains information about the included electrode contact coordinates and the electrode contact areas
-    DWI = dir(fullfile(dataPath2,sub_label,ses_label,...
-            [sub_label, '_', ses_label,'_',task_label,'_',run_label_dwi,'_dwiInfo.mat'])); % made by running STReEF02_coreg_roidef_matlab
-    SOZ = dir(fullfile(dataPath2,sub_label,ses_label,...
-            [sub_label, '_', ses_label,'_',task_label,'_',run_label_dwi,'_sozInfo.mat'])); % load SOZ if you runned the 'load SOZ information' earlier
-    if size(DWI,1) == 0
-            error('%s does not exist',fullfile(dataPath2,sub_label,ses_label,...
-            [sub_label, '_', ses_label,'_',task_label,'_',run_label_dwi,'_dwiInfo.mat']));
-    end 
-    if size(SOZ,1) == 0
-            error('%s does not exist',fullfile(dataPath2,sub_label,ses_label,...
-            [sub_label, '_', ses_label,'_',task_label,'_',run_label_dwi,'_sozInfo.mat']));
-    end 
-    dataNameDWI = fullfile(DWI(1).folder, DWI(1).name);
-    dwi = load(dataNameDWI);
-    dataNameSOZ = fullfile(SOZ(1).folder, SOZ(1).name);
-    soz = load(dataNameSOZ);
 
-    dataBase(subj).ses_label = ses_label;
-    dataBase(subj).sub_label = sub_label;
-    dataBase(subj).dwi = dwi;
-    dataBase(subj).soz = soz.soz_include;
+dataBase = load_derivatives_data(myDataPath,cfg);
 
-    % load detected and visual scored ccep data (made by running umcuEpi_CCEP_DTI (main)/matlab/scripts/ccepDTI03_detectCCEP.m)
-    for run = 1:size(cfg.run_label{subj},2)
-    run_label = cfg.run_label{subj}{run}; 
- 
-    DRE = dir(fullfile(dataPath,sub_label,ses_label,run_label,...
-            [sub_label, '_', ses_label,'_',task_label,'_',run_label,'_N1sChecked.mat'])); % checked data
-    if size(DRE,1) == 0
-            error('%s does not exist',fullfile(dataPath,sub_label,ses_label,run_label,...
-            [sub_label, '_', ses_label,'_',task_label,'_',run_label,'_N1sChecked.mat']));
-    end 
-    dataNameRE = fullfile(DRE(1).folder, DRE(1).name);
-    ccep = load(dataNameRE);
-
-    dataBase(subj).ccep(run).run_label = run_label;
-    dataBase(subj).ccep(run).ccep = ccep;
-    end
-end
-clear dataNameRE dataPath run_label ses_label sub_label task_label DRE run_label_dwi run subj
 disp('visual checked data loaded')
-clear ccep dataNameDWI dataNameSOZ dataPath2 dwi DWI soz SOZ
+
+%% extract SOZ information
+for subj = 1:size(cfg.sub_label,2)
+dataBase(subj).soz.soz = strcmpi(dataBase(subj).tb_electrodes.soz,'yes');
+end
+disp('SOZ information loaded')
+
 %% merge runs
 % Be aware! Code with potential of causing errors due to copying of information, so check for new types of patients or new code added!
 for subj= 1:size(dataBase,2)
@@ -178,8 +88,7 @@ end
 
 disp('runs merged')
 clear scored run subj stimsets stimchannels  n1_peak_sample n1_peak_amplitude
-%% solve mistake in stimchans of patient 10 (10/13) (we just have to change this in the BIDS now I know how to do that)
- dataBase(10).ccep.cc_stimchans(48,2)={'F07'};
+
  %% SECTION 2: construct the effective and structural networks
 %% construct an effective network matrix
 % Connections were drawn from both electrode contacts in a stimulus pair to the electrode contacts in which an ER was detected.  
@@ -321,84 +230,22 @@ SC_matrix_dwi(SC_matrix_dwi>=treshold)=1;
 dataBase(subj).dwi.SC_matrix = SC_matrix_dwi; 
 end
 disp('SC_matrix made')
- clear angle cutoff maxlength minlength SC_matrix_dwi seed_voxel step treshold cor_size dir1 dataPath dataName subj sub_label
+clear angle cutoff maxlength minlength SC_matrix_dwi seed_voxel step treshold cor_size dir1 dataPath dataName subj sub_label
 
- %% define the SOZ channels correctly
- % transform SOZ include such that it matches indexces of ch_include
-for subj = 1:size(dataBase,2)
-ch = dataBase(subj).ccep.ch;
-elec_include = dataBase(subj).dwi.elec_include;
-soz = dataBase(subj).soz;
-ch_include = ch(elec_include);
-soz_include = ch(soz);
-soz_ind = NaN(size(soz_include,1),1);
-for s = 1:size(soz_include,1)
-    soz_in = soz_include(s);
-    indx_soz = strcmpi(soz_in,ch_include); 
-    soz_ind(s) = find(indx_soz); 
-end
-dataBase(subj).soz_ind = soz_ind;
-no_soz_ind = 1:size(ch_include,1);
-no_soz_ind(soz_ind) = NaN;
-no_soz_ind(isnan(no_soz_ind)) = [];
-dataBase(subj).no_soz_ind = no_soz_ind;
-end
-
-clear ch ch_include elec_include indx_soz s soz soz_in soz_include soz_ind subj no_soz_ind
-
-% find the indeces from the vector with all channel names for the included and soz channels for easier computations
-for subj = 1:size(dataBase,2)
-ch = dataBase(subj).ccep.ch;
-elec_include = dataBase(subj).dwi.elec_include;
-ch_include = ch(elec_include);
-soz = dataBase(subj).soz;
-soz_include = ch(soz); 
-
-elec_ind = NaN(size(ch_include,1),1);
-soz_ind_ch = NaN(size(ch(soz),1),1);
-for s = 1:size(ch_include,1)
-    elec_in = ch_include(s);
-    indx = strcmpi(elec_in,ch); 
-    elec_ind(s) = find(indx); 
-end
-for s = 1:size(soz_include,1)
-    soz_in = soz_include(s);
-    indx = strcmpi(soz_in,ch);
-    soz_ind_ch(s) = find(indx);
-end
-dataBase(subj).soz_ind_ch = soz_ind_ch; % indeces of the soz channels when counting with all channels
-dataBase(subj).elec_ind = elec_ind; % indeces of the included channels when counting with all channels
-end
-disp('SOZ channels defined')
-clear ch ch_include elec_include indx s elec_in elec_ind subj soz_ind_ch soz soz_in soz_include 
-
-%% SECTION 3: caculate the inter-modal similarity and prepare for the Jaccard Index calculation in R
+%% SECTION 3: calculate the inter-modal similarity and prepare for the Jaccard Index calculation in R
 
 JI = zeros(size(dataBase,2,1));
 for subj=1:size(dataBase,2)
+dataPath = myDataPath.DWIMATLABpath; 
 sub_label = erase(dataBase(subj).sub_label,'sub-RESP');
-dir_SC = ['/Fridge/users/susanne/derivatives/dwi_matlab/' dataBase(subj).sub_label];
+dir_SC = [dataPath dataBase(subj).sub_label];
+
 a = dataBase(subj).dwi.SC_matrix;
 b =  dataBase(subj).ccep.EC_matrix;  
-% % save([dir_SC '/SC_matrix_dwi'],'a','-ascii') % save the structural network
-% % save([dir_SC '/SC_matrix_ccep'],'b','-ascii') % save the effective network
+save([dir_SC '/SC_matrix_dwi'],'a','-ascii') % save the structural network
+save([dir_SC '/SC_matrix_ccep'],'b','-ascii') % save the effective network
 JI(subj) = sum(sum(a & b))/sum(sum(a | b)); % calculate the Jaccard Index to be able to compare it with the Jaccard Index calculated with R
 end
-sub_labels = cfg.sub_label;
-grid = [1,6,8,9,10];
-JI_grid = table(sub_labels(grid)',JI(grid));
-seeg = [2,3,4,5,7,11,12,13];
-JI_seeg = table(sub_labels(seeg)',JI(seeg));
-
-median_seeg = median(JI_seeg.Var2)
-IQR_seeg = iqr(JI_seeg.Var2)
-median_grid = median(JI_grid.Var2)
-IQR_grid = iqr(JI_grid.Var2)
-prctile(JI_grid.Var2,[25 75])
-prctile(JI_seeg.Var2,[25 75])
-
-result_JI = table( [round(JI,2);median(JI);prctile(JI,[25 75])']); % present the statistics of the Jaccard Index in a table
-
 
 % calculate expected Jaccard to check with R
 JI_expected = zeros(size(dataBase,2,1));
@@ -428,17 +275,39 @@ for subj=1:size(dataBase,2)
     JI_parker(subj) = (d_EC*d_SC)/(d_EC+d_SC); % this is how Christopher Parker explained it to me via email (https://www.sciencedirect.com/science/article/pii/S221315821730325X?via%3Dihub)
 end
 
-JIs_expected = round([JI_expected([1,6,8,9,10]);JI_expected([2,3,4,5,7,11,12,13])],2); % present it in the order of the paper, first grid, then sEEG
-JIs_alternative = round([JI_alternative([1,6,8,9,10]);JI_alternative([2,3,4,5,7,11,12,13])],2); 
-JIs_parker = round([JI_parker([1,6,8,9,10]);JI_parker([2,3,4,5,7,11,12,13])],2); 
-
-clear grid seeg sub_label sub_labels subj dir_SC a b IQR_grid IQR_seeg median_grid median_seeg n_EC p_EC a_EC d_EC n_SC p_SC a_SC d_SC pis pjs EC_matrix SC_matrix%JI_alternative JI_parker JI
+clear  sub_label sub_labels subj dir_SC a b n_EC p_EC a_EC d_EC n_SC p_SC a_SC d_SC pis pjs EC_matrix SC_matrix
 %% R warning
 warning('run now R code in STReEF05_compare_networks_R and run section 1)')
-%% SECTION 4: calculate the network topography
+%% SECTION 4: calculate the network topography and node proximity
 %%
 % this section was first implemented in the figures themselfs (not handy)
 % change such that the network topography measures are also stored in the dataBase
+
+% transform SOZ include such that it matches indexces of ch_include for
+ % easy computation of the network measures
+for subj = 1:size(dataBase,2)
+ch = dataBase(subj).ccep.ch;
+elec_include = dataBase(subj).dwi.elec_include;
+soz = dataBase(subj).soz.soz;
+ch_include = ch(elec_include);
+soz_include = ch(soz);
+soz_ind = NaN(size(soz_include,1),1);
+for s = 1:size(soz_include,1)
+    soz_in = soz_include(s);
+    indx_soz = strcmpi(soz_in,ch_include); 
+    soz_ind(s) = find(indx_soz); 
+end
+dataBase(subj).soz.soz_ind = soz_ind;
+no_soz_ind = 1:size(ch_include,1);
+no_soz_ind(soz_ind) = NaN;
+no_soz_ind(isnan(no_soz_ind)) = [];
+dataBase(subj).soz.no_soz_ind = no_soz_ind;
+end
+
+clear ch ch_include elec_include indx_soz s soz soz_in soz_include soz_ind subj no_soz_ind
+
+disp('SOZ channels defined')
+%% calculate network measures
 for subj = 1:size(dataBase,2)
 
 sub_label = erase(dataBase(subj).sub_label,'sub-');
@@ -448,8 +317,8 @@ EC =  dataBase(subj).ccep.EC_matrix;
 ch = dataBase(subj).ccep.ch;
 elec_include = dataBase(subj).dwi.elec_include;
 ch_include = ch(elec_include);
-soz_ind = dataBase(subj).soz_ind;
-no_soz_ind = dataBase(subj).no_soz_ind;
+soz_ind = dataBase(subj).soz.soz_ind;
+no_soz_ind = dataBase(subj).soz.no_soz_ind;
 
 % DEGREE
 G_SC = graph(SC,ch_include); % graph structure
@@ -457,80 +326,28 @@ G_EC = graph(EC,ch_include);
 
 degree_SC = degree(G_SC);
 degree_EC = degree(G_EC);
-degree_SC_soz = degree_SC(soz_ind);
-degree_EC_soz = degree_EC(soz_ind);
-degree_SC_nsoz = degree_SC(no_soz_ind);
-degree_EC_nsoz = degree_EC(no_soz_ind);
+dataBase.network.degree_SC = degree_SC;
+dataBase.network.degree_EC = degree_EC;
+dataBase.network.degree_SC_soz = degree_SC(soz_ind);
+dataBase.network.degree_EC_soz = degree_EC(soz_ind);
+dataBase.network.degree_SC_nsoz = degree_SC(no_soz_ind);
+dataBase.network.degree_EC_nsoz = degree_EC(no_soz_ind);
 
 % betweennes centrality
 BC_SC = centrality(G_SC,'betweenness');
 BC_EC = centrality(G_EC,'betweenness');
-BC_SC_soz = BC_SC(soz_ind);
-BC_EC_soz = BC_EC(soz_ind);
-BC_SC_nsoz = BC_SC(no_soz_ind);
-BC_EC_nsoz = BC_EC(no_soz_ind);
+dataBase.network.BC_SC = BC_SC;
+dataBase.network.BC_EC = BC_EC;
+dataBase.network.BC_SC_soz = BC_SC(soz_ind);
+dataBase.network.BC_EC_soz = BC_EC(soz_ind);
+dataBase.network.BC_SC_nsoz = BC_SC(no_soz_ind);
+dataBase.network.BC_EC_nsoz = BC_EC(no_soz_ind);
 end
-%% prepare data for multilevel model
-
-data_long = NaN(size(d_all,1),11); % matrix with for every channel per patient the specifications
-
-i=1;
-for subj = [1,2,3,4,6,7,8,9,10,11,12]% only seizure free patients
-SC = dataBase(subj).dwi.SC_matrix;
-EC =  dataBase(subj).ccep.EC_matrix;  
-sub_label = erase(dataBase(subj).sub_label,'sub-RESP');
-ch = dataBase(subj).ccep.ch;
-elec_include = dataBase(subj).dwi.elec_include;
-ch_include = ch(elec_include);
-sz = size(ch_include,1);
-channels = 1:sz;
-soz_ind = dataBase(subj).soz_ind;
-no_soz_ind = dataBase(subj).no_soz_ind;
-distance = dataBase(subj).dwi.distance_ch;
-center_distance = distance - median(distance); % node proximity
-volume = dataBase(subj).dwi.volume_roi; % volume per electrode contact area
-epi = NaN(sz,1);
-epi(soz_ind) = 1; % if the channel is in the SOZ or not
-epi(no_soz_ind) = 0;
-
-% DEGREE
-G_SC = graph(SC,ch_include); % graph structure
-G_EC = graph(EC,ch_include);
-
-degree_SC = degree(G_SC);
-degree_EC = degree(G_EC);
-center_SC = degree_SC - median(degree_SC);
-center_EC = degree_EC - median(degree_EC);
-nor_SC = degree_SC./sz;
-nor_EC = degree_EC./sz;
-
-data_long(i:i+sz-1,1)= str2double(sub_label)*ones(sz,1); % patient RESP numbers
-data_long(i:i+sz-1,2)= degree_SC; % degree structural networks
-data_long(i:i+sz-1,3)= degree_EC; % degree effective networks
-data_long(i:i+sz-1,4)= center_SC; % centered degree (not used in the end)
-data_long(i:i+sz-1,5)= center_EC;
-data_long(i:i+sz-1,6)= nor_SC; % normalized degree with the nr of channels (not used in the end)
-data_long(i:i+sz-1,7)= nor_EC;
-data_long(i:i+sz-1,8)= distance;
-data_long(i:i+sz-1,9)= center_distance; % node proximity
-data_long(i:i+sz-1,10)= volume; % volume per electrode contact area
-data_long(i:i+sz-1,11)= epi; % if the channel is in the SOZ or not
-data_long(i:i+sz-1,12)= channels; % channel names
-
-i=i+sz;
-end
-par_data = [" subj","degreeSC","degreeEC",'centerSC','centerEC','nor_SC','nor_EC','distance','centerdistance','volume','epi','channels'];
-data_l=array2table(data_long,'VariableNames',par_data);
-writetable(data_l,'data_long.csv') % save the matrix with for every channel per patient the specifications
-%% R warning
-warning('run now R code in STReEF05_compare_networks_R and run section 2)')
-
-%% SECTION 5: Node proximity
-% calculate distance between two electrode contact coordinates (this section can be shorter)
-% this section was first implemented in the figures themselfs (not handy)
-% change such that the node proximity are also stored in the dataBas
+clear G_SC G_EC ch elec_include ch_include soz_ind no_soz_ind SC EC sub_label degree_SC degree_EC BC_SC BC_EC
+%% node proximity
+% calculate distance between two electrode contact coordinates
 for subj = 1:size(dataBase,2)
-elec_indx = dataBase(subj).metadata.elec_include;
+elec_indx = dataBase(subj).dwi.elec_include;
 sub_label = dataBase(subj).sub_label;
 coordinates = [dataBase(subj).tb_electrodes.x(elec_indx) dataBase(subj).tb_electrodes.y(elec_indx) ...
                 dataBase(subj).tb_electrodes.z(elec_indx)]; % the columns are the x,y,z coordinates, the rows the channels
@@ -543,35 +360,107 @@ end
 distances = NaN(size(coordinates,1)); % distance in mm between two electrode contacts
 for  cor = 1:size(coordinates,1)
 for  cor2 = 1:size(coordinates,1)
-[D_dis, I_dis] = pdist2(coordinates(cor),coordinates(cor),'euclidean','Largest',1); % compute the euclidian distance between the electrode contact coordinates
+D_dis = pdist2(coordinates(cor,:),coordinates(cor2,:),'euclidean'); % compute the euclidian distance between the electrode contact coordinates
 if ~isempty(D_dis)
-    distances(cor,cor2) = max(D_dis);
+    distances(cor,cor2) = D_dis;
 else 
-    fprintf('empty roi volume van %d or %d',cor,cor2)
+    fprintf('empty coordinate in %d or %d',cor,cor2)
 end
 end
 end
-dataBase(subj).metadata.distances_ch = distances; % save in dataBase
+dataBase(subj).network.distances = distances; % save in dataBase
+end
 
-dir2 = [myDataPath.coreg_ROIpath sprintf('%s/',sub_label)];
-save([dir2 'distances_ch.txt'],'distances','-ascii') % save in the designated co-registration and roi definition folder ('coreg_ROI') 
-end
 % compute the node proximity:  the node proximity per node was defined as the median distance between this node and all other nodes. 
 for subj = 1:size(dataBase,2)
 ch = dataBase(subj).ccep.ch;elec_include = dataBase(subj).dwi.elec_include;ch_include = ch(elec_include);
 sub_label = dataBase(subj).sub_label;
 
-distances_median = NaN(size(ch_include,1),1);
-
-dir2 = [myDataPath.coreg_ROIpath sprintf('%s/',sub_label)];
-distance = load([dir2 'distances_ch.txt']);
+node_prox = NaN(size(ch_include,1),1);
 
 for ch = 1:size(ch_include,1)
-distances_median(ch) = median(nonzeros(distance(:,ch)));
+node_prox(ch) = median(nonzeros(dataBase(subj).network.distances(:,ch)));
 end
-dataBase(subj).dwi.distance_ch = distances_median; % the node proximity per node was defined as the median distance between this node and all other nodes. 
-% node proximity = center_distance = distance - median(distance);
+dataBase(subj).network.node_proximity = node_prox; % the node proximity per node was defined as the median distance between this node and all other nodes. 
 end
+clear ch_include ch coordinates cor cor2 D_dis distances elec_include elec_indx I_dis node_prox
+%% prepare data for multilevel model
+included =  NaN(size(cfg.sub_label,2),1);
+for subj = 1:size(dataBase,2)
+included(subj) = size(dataBase(subj).ccep.EC_matrix,1);
+end
+size_long = sum(included);
+data_long = NaN(size_long,7); % matrix with for every channel per patient the specifications
+
+i=1;
+for subj = 1 %[1,2,3,4,6,7,8,9,10,11,12]% only patients where soz could be defined
+sub_label = erase(dataBase(subj).sub_label,'sub-RESP');
+SC = dataBase(subj).dwi.SC_matrix;
+EC =  dataBase(subj).ccep.EC_matrix;  
+
+ch = dataBase(subj).ccep.ch;
+elec_include = dataBase(subj).dwi.elec_include;
+ch_include = ch(elec_include);
+sz = size(ch_include,1);
+channels = 1:sz;
+soz_ind = dataBase(subj).soz.soz_ind;
+no_soz_ind = dataBase(subj).soz.no_soz_ind;
+
+volume = dataBase(subj).dwi.volume_roi; % volume per electrode contact area
+epi = NaN(sz,1);
+epi(soz_ind) = 1; % if the channel is in the SOZ or not
+epi(no_soz_ind) = 0;
+
+data_long(i:i+sz-1,1)= str2double(sub_label)*ones(sz,1); % patient RESP numbers
+data_long(i:i+sz-1,2)= dataBase.network.degree_SC; % degree structural networks
+data_long(i:i+sz-1,3)= dataBase.network.degree_EC; % degree effective networks
+data_long(i:i+sz-1,4)= dataBase.network.node_proximity;
+data_long(i:i+sz-1,5)= volume; % volume per electrode contact area
+data_long(i:i+sz-1,6)= epi; % if the channel is in the SOZ or not
+data_long(i:i+sz-1,7)= channels; % channel names
+
+i=i+sz;
+end
+
+par_data = [" subj","degreeSC","degreeEC",'node_proximity','volume','epi','channels'];
+data_l=array2table(data_long,'VariableNames',par_data);
+dataPath = myDataPath.DWIMATLABpath; 
+dir = [dataPath];
+writetable(data_l,[dir 'data_long.csv']) % save the matrix with for every channel per patient the specifications
+
+clear ch ch_include channels data_l data_long EC elec_include epi i included no_soz_ind par_data SC size_long soz_ind sz volume dir dataPath sub_label subj
+%% R warning
+warning('run now R code in STReEF05_compare_networks_R and run section 2)')
+
+%% SECTION 5 save the important variables of the  file
+% put all the database variables in one struct and save it as networkInfo.mat 
+for subj = 1:size(dataBase,2)
+    targetFolder = fullfile(myDataPath.DWIMATLABpath,dataBase(subj).sub_label,dataBase(subj).ses_label); % save the computed variables for further use in a designated folder 'dwi_matlab' 
+
+    % Create the folder if it doesn't exist already.
+    if ~exist(targetFolder, 'dir')
+        mkdir(targetFolder);
+    end
+    
+    start_filename = strfind(dataBase(subj).dwi.dataName,'/');
+    stop_filename = strfind(dataBase(subj).dwi.dataName,'_ieeg');
+    
+    fileName = [dataBase(subj).dwi.dataName(start_filename(end)+1:stop_filename-1),'_networkInfo.mat']; % name it in a similair way as the CCEP files
+    
+    % insert variables
+    network = dataBase(subj).network; % containing degree, BC, and node proximity 
+    network.soz = dataBase(subj).soz; % containing soz and derivatives containing indexces of ch_include 
+    network.SC_matrix = dataBase(subj).dwi.SC_matrix; % structural network matrix
+    network.SC_matrix_values = dataBase(subj).dwi.SC_matrix_values; % structural network matrix with streamline density
+    network.EC_matrix = dataBase(subj).ccep.EC_matrix; % structural network matrix
+    network.EC_matrix_amplitude = dataBase(subj).ccep.EC_matrix_amplitude ; % effective network matrix with N1 amplitude
+    network.EC_matrix_sample = dataBase(subj).ccep.EC_matrix_sample ; % effective network matrix with latency 
+
+    save(fullfile(targetFolder,fileName), '-struct','network');
+    fprintf('Saved network-struct in %s \n',fullfile(targetFolder,fileName))
+end
+clear fileName start_filename stop_filename targetFolder
+
 
  %% SECTION 6: functions to be implemented and check of the data
  %% exclude electrodes contact areas with too much overlap ( to be implemented in the analysis)
