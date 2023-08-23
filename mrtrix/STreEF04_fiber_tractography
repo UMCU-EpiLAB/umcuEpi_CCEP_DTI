@@ -10,11 +10,12 @@ SECTION 1 : prepare MRI, DWI, and electrode contact area data
 -----------------------------------------------------------------------
 # move only the necessary data from the co-registration and roi definition folder ('coreg_ROI') and the fiber orientation distribution folder ('dwi2fod') to a designated fiber tractography folder ('tracts2connectome_all') ,one folder is made for each subject
 
-for subj in 0856 #0753 0968 0882 0984
+for subj in 0703 0749 0753 0778 0856 0882 0905 0928 0968 0978 0984 0992 0993
 do    
     Dir=tract2connectome_all # see personalDataPath_mrtrix file for the exact dir (**)
-    cd $Dir #/sub-RESP${subj}
+    $Dir
     mkdir sub-RESP${subj}
+    cd $Dir /sub-RESP${subj}
     
     # copy the white matter fiber orientation distributions into the data folders
     cp *dwi2fod*/wmfod.mif *tract2connectome_all*
@@ -23,19 +24,16 @@ do
     cp *coreg_ROI*/{5tt_mask.mif,gmwmSeed_mask.mif} *tract2connectome_all*
 
     # copy the electrode contact area data suitable for use a seeding mask for tractograph (each voxel contains a value based on the magnitude of the gradient of the GM/WM partial volume images) into the data folders (roi template in mrtrix terms) 
-    cp /Fridge/users/susanne/derivatives/coreg_ROI/sub-RESP${subj}/coordinate_roi/coordinate_all_tckgen.mif *tract2connectome_all*
+    cp *coreg_ROI*/coordinate_roi/coordinate_all_tckgen.mif *tract2connectome_all*
       
     # copy the electrode contact area data, with voxels values corresponding to their electrode contact coordinate index (unique number per electrode contact area), into the data folders (nodes-in template in mrtrix terms)
     cp *coreg_ROI*/coordinate_roi/coordinate_all_connectome.mif *tract2connectome_all*
 
     # copy the MRI-DWI (MRI acquired at the time of the DWI scan) into the data folders for visualization purposes
-    cp /*coreg_ROI*/MRI_DWI_sub-RESP${subj}_coreg.mif /*tract2connectome_all*
+    cp /*coreg_ROI*/MRI_DWI_sub-RESP${subj}_coreg.mif *tract2connectome_all*
 
     # copy the volume of all electrode contact areas combined, per patient, into the data folders (seeding volume in mrtrix terms)
-    cp *coreg_ROI*/coordinate_roi/total_volume.txt /*tract2connectome_all*
-    
-    # copy the largest euclidian distance between two electrode contact areas into the data folders (max length in mrtrixt terms, not used?)
-    cp *coreg_ROI*/coordinate_roi/distances.txt *tract2connectome_all*
+    cp *coreg_ROI*/coordinate_roi/total_volume.txt *tract2connectome_all*
 
 done
 
