@@ -8,7 +8,7 @@
 % So first section 1 of the file: ' STReEF02_coreg_roidef_mrtrix' and than section 1 of this file so on.. 
 
 % load sEEG/ECOG data, split into stimulation trials, select electrode channels, co-register MRI and DWI data and calculate the transformation matrix,
-% transform electrode contact coordinates, define region-of-interests(ROI)/electrode contact areas, compute characteristics from the electrode contact areas, and save the important variables
+% transform electrode contact coordinates, define region-of-interests(ROI)/electrode contact areas, and save the important variables
 
 %% SECTION 1: prepare sEEG/ECOG data (load sEEG/ECOG data, split into stimulation trials), select electrode channels, co-register MRI and DWI data with SPM, and calculate the transformation matrix  
 
@@ -160,7 +160,7 @@ end
 end
 end
 
-clear stimchannels chan_include elec_include elec_indx idx_all idx_bad idx_csf idx_screw idx_silicon idx_whitematter j i subjs run
+clear stimchannels chan_include elec_include elec_indx idx_all idx_bad bad idx_csf idx_screw idx_silicon idx_whitematter j i subjs run
 %% mrtrix warning
 warning('make sure you have the MRIs in the right directory (see mrtrix code in STReEF02_coreg_roidef_mrtrix and run section 1)')
 % run this part after you runned section 1 of 'STReEF02_coreg_roidef_mrtrix'
@@ -183,7 +183,7 @@ t_matrix_dwi=spm_matrix(x_dwi(:)'); % extract the transformation matrix
 save([dir 'transmatrix_dwi.txt'],'t_matrix_dwi','-ascii') % save the transformation matrix in the designated co-registration and roi definition folder ('coreg_ROI')
 dataBase(subj).metadata.transmatrix_dwi = t_matrix_dwi; % save the transformation matrix in the dataBase for inspection and further use
 end
-clear elec_indx sub_label source reference flags 
+clear elec_indx sub_label source reference flags x_dwi
 
 %% SECTION 2:co-register MRI data with SPM, and calculate the transformation matrix 
 %% mrtrix warning
@@ -209,7 +209,7 @@ t_matrix_mri=spm_matrix(x_mri(:)');
 save([dir 'transmatrix_mri.txt'],'t_matrix_mri','-ascii') % save the transformation matrix in the designated co-registration and roi definition folder ('coreg_ROI')
 dataBase(subj).metadata.transmatrix_mri = t_matrix_mri; % save the transformation matrix in the dataBase for inspection and further use
 end
-clear elec_indx sub_label source reference flags 
+clear elec_indx sub_label source reference flags x_mri
 
 %% SECTION 3:transform electrode contact coordinates 
 %% mrtrix warning
@@ -248,17 +248,17 @@ dir = [myDataPath.coreg_ROIpath sprintf('%s/',sub_label)]; % path to the designa
 CT_BIDS = [dir sprintf('CT_BIDS_%s_coreg.nii',sub_label)]; 
 MRI_DWI = [dir sprintf('MRI_DWI_%s_coreg.nii',sub_label)];
 DWI = [dir 'mean_b0_preprocessed.nii'];
-[output,~,~,outputStruct] = position2reslicedImage_oud(coordinates_trans,MRI_DWI); 
+[output,~,~,outputStruct] = position2reslicedImage(coordinates_trans,MRI_DWI);  % saves the electrode coordinates in the MRI-DWI volume
 outputStruct.fname = [dir 'coordinates_trans_mri.nii'];
 spm_write_vol(outputStruct,output);
-[output,~,~,outputStruct] = position2reslicedImage_oud(coordinates_trans,DWI); 
+[output,~,~,outputStruct] = position2reslicedImage(coordinates_trans,DWI); % saves the electrode coordinates in the DWI volume
 outputStruct.fname = [dir 'coordinates_trans_dwi.nii'];
 spm_write_vol(outputStruct,output);
-[output,~,~,outputStruct] = position2reslicedImage_oud(coordinates_trans,CT_BIDS); 
+[output,~,~,outputStruct] = position2reslicedImage(coordinates_trans,CT_BIDS); % saves the electrode coordinates in the CT volume
 outputStruct.fname = [dir 'coordinates_trans_CT.nii'];
 spm_write_vol(outputStruct,output);
 end
-clear one points lat_trans rot_trans output outputStruct
+clear one points lat_trans rot_trans coordinates elec_indx output outputStruct MRI_DWI CT_BIDS DWI t_matrix_dwi t_matrix_inv_mri t_matrix_mri 
 
 %% SECTION 4:define region-of-interests(ROI)/electrode contact areas
 %% mrtrix warning
@@ -271,7 +271,7 @@ warning('make sure you have the grey-white matter boundary  mask in the right di
 for subj=1:size(dataBase,2)
 sub_label = dataBase(subj).sub_label;
 dir = [myDataPath.coreg_ROIpath sprintf('%s/',sub_label)]; % path to the designated co-registration and roi definition folder ('coreg_ROI') 
-gmwm_mask = read_mrtrix ([dir 'gmwmSeed_mask.mif']); % the grey-white matter boundary mask
+gmwm_mask = read_mrtrix([dir 'gmwmSeed_mask.mif']); % the grey-white matter boundary mask
 
 % extract the coordinates of the grey-white matter boundary mask
 logical_mask = logical(gmwm_mask.data); % make the mask binair
@@ -314,23 +314,26 @@ one = ones(size(pos_overlap,1),1);
 points = [pos_overlap one]';
 cor_overlap_real = vox2real * points; % transform the overlapping coordinates in the electrode contact areas from the voxel space to the real world space
 cor_overlap_real = cor_overlap_real(1:3,:)';
-[D4, I4] = pdist2(coordinates_trans,cor_overlap_real,'euclidean','Smallest',1); % compute the euclidian distance between the electrode contact coordinates and the overlapping coordinates in the electrode contact areas
+[D4, I4] = pdist2(coordinates_trans,cor_overlap_real,'euclidean','Smallest',1); % compute the euclidian distance between the electrode contact coordinates and the overlapping voxel coordinates in the electrode contact areas
+% vector I4 contains the numbers of the closest electorde contact coordinate
+
 % remove per electrode contact area the voxels with overlap and assign each overlap voxel to the closest electrode contact area
+volume_roi= NaN(size(coordinates_trans,1),1); 
 for cor = 1:size(coordinates_trans,1)
 [D2, I2] = pdist2(cor_mask_real,coordinates_trans(cor,:),'euclidean','Smallest',64); % compute the euclidian distance between the electrode contact coordinates and the gray-white matter boundary mask
 coordinate_roi = cor_mask_real(I2,:);
 [val,pos]=intersect(coordinate_roi,cor_overlap_real,'rows');  % voxels with overlap
 coordinate_roi(pos,:)=[]; % remove voxels with overlap
 if intersect(I4,cor)
-closest = ismember(I4,cor); % find the closest electrode contact area for the each voxel with overlap
+closest = ismember(I4,cor); % see if this electrode contact is in the list of the closest electrode contact area for the each voxel with overlap
 coordinate_roi = [coordinate_roi; cor_overlap_real(closest,:)]; % assign the voxel with overlap to the closest electrode contact area
 end
+
 data2 = position2reslicedImage_mif_nosave(coordinate_roi,template,cor); % save the coordinates of the electrode contact areas and give those voxels a value, corresponsing to their electrode contact coordinate index
 roi_connectome = zeros(size(gmwm_mask.data));
 roi_connectome = roi_connectome+data2.data; % store all the coordinates of the final electrode contact areas in one volume
 
 %compute the final volume per electrode contact area (64 mm3 or less)
-volume_roi= NaN(size(coordinates_trans,1),1); 
 volume_roi(cor) = size(coordinate_roi,1);
 
 % if you want to check this step, use these two lines to save the data
@@ -348,49 +351,10 @@ save([dir2 'volume_roi.txt'],'volume_roi','-ascii') % save the volume per electr
 save([dir2 'total_volume.txt'],'total_volume','-ascii') % save the volume of all electrode contact areas combined, per patient
 end
 
-%% SECTION 5: compute characteristics from the electrode contact areas and save the important variables of the whole file
+clear check_logical closest coordinate_roi coordinates_trans cor cor_mask_real cor_overlap_real D2 D4 data data2 dir dir2 gmwm_mask I2 I4 logical_mask pos pos_mask pos_overlap roi roi_con_header roi_connectome roi_header template total_volume val volume_roi vox2real x2 x4 y2 y4 z2 z4
+%% SECTION 5: save the important variables of the whole file
 %% mrtrix warning
 warning('make sure you also run the final section of the twin written in mrtrix code (see STReEF02_coreg_roidef_mrtrix and run section 5)')
-%% compute the distances between the electrode contact areas, not used in the end I guess?
-for subj=1:size(dataBase,2)
-sub_label = dataBase(subj).sub_label;
-dir = [myDataPath.coreg_ROIpath sprintf('%s/',sub_label)]; % path to the designated co-registration and roi definition folder ('coreg_ROI') 
-dir2 = [dir 'coordinate_roi/']; % path to a sub-folder of the designated co-registration and roi definition folder ('coordinate_roi') (made for clarity, not necessary?)
-rois = read_mrtrix ([dir2 'coordinate_all_connectome.mif']); % path to the electrode contact area data
-roi_elec = rois.data;
-
-% extract the individual electrode contact areas
-coordinates_trans = dataBase(subj).metadata.coordinates_trans_mri; 
-vox2real2 = rois.transform;
-roi_dis = struct();
-for cor = 1:size(coordinates_trans,1)
-[x3, y3, z3] = ind2sub(size(roi_elec),find(roi_elec==cor)); % extract the individual electrode contact areas based on their voxel values (value corresponds to electrode contact coordinate index)
-pos_mask = [x3, y3, z3];
-one = ones(size(pos_mask,1),1);
-points = [pos_mask one]';
-roi_real = vox2real2 * points; %  transform the coordinates in the electrode contact areas from the voxel space to the real world space
-roi_real = roi_real(1:3,:)';
-roi_dis.(sprintf('cor_%d',cor)) = roi_real; 
-clear x3 y3 z3 pos_mask one points roi_real 
-end
-
-distances = zeros(size(coordinates_trans,1));
-for  cor = 1:size(coordinates_trans,1)
-for  cor2 = 1:size(coordinates_trans,1)
-[D_dis, I_dis] = pdist2(roi_dis.(sprintf('cor_%d',cor)),roi_dis.(sprintf('cor_%d',cor2)),'euclidean','Largest',1); % compute the largest euclidian distance between the two electrode contact areas
-if ~isempty(D_dis)
-    distances(cor,cor2) = max(D_dis);
-else 
-    fprintf('empty electrode contact area volume van %d or %d',cor,cor2) % warn if there is a electrode contact area not containing voxels
-end
-end
-end
-dataBase(subj).metadata.distances = distances;
-save([dir2 'distances.txt'],'distances','-ascii') % save the maximum distances between two electrode contact areas
-writematrix(distances,[dir2 'distances.txt'],'distances','-ascii') % other way of saving
-disp(max(max(distances))); disp(min(min(distances))); disp(mean(mean(distances)))
-end
-
 %%  save the important variables of the whole file
 % put all the database variables in one struct and save it as dwiInfo.mat 
 for subj = 1:size(dataBase,2)
@@ -417,7 +381,6 @@ for subj = 1:size(dataBase,2)
     dwi.transmatrix_dwi = dataBase(subj).metadata.transmatrix_dwi; % transformation matrix between the MRI-DWI and the DWI data
     dwi.coordinates_trans_mri = dataBase(subj).metadata.coordinates_trans_mri; % transformated electrode contact coordinates
     dwi.volume_roi = dataBase(subj).metadata.volume_roi; % volume per electrode contact area
-    dwi.distances = dataBase(subj).metadata.distances; % largest euclidian distance between two electrode contact areas
 
     save(fullfile(targetFolder,fileName), '-struct','dwi');
     fprintf('Saved dwi-struct in %s \n',fullfile(targetFolder,fileName))
