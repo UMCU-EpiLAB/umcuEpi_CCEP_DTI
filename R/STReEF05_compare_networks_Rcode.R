@@ -75,9 +75,23 @@ write.xlsx(expected,file ="*dwi_matlab*/jaccard_index.xlsx",sheetName='expected'
 SECTION 2: construct a linear multilevel model
 -----------------------------------------------------------------------
 # install packages (only needed if you run this file for the first time)
+install.packages("swirl")
 install.packages("sjstats",dependencies = TRUE)
 install.packages("car",dependencies = TRUE)
+install.packages("carData",dependencies = TRUE)
+install.packages(c("backports","effects","ggplot2","interactions","lme4","lmerTest","psych","plyr"))
+                 
+library(backports)     # to revive the isFALSE() function for sim_slopes()
+library(effects)       # for probing interactions
+library(ggplot2)       # for data visualization
+library(interactions)  # for probing/plotting interactions
+library(lme4)          # for multilevel models
+library(lmerTest)      # for p-values
+library(psych)         # for describing the data
+library(plyr)          # for data manipulation
 library("car")
+library("swirl")
+library("carData")
 
 # read in the matrix file 
 data_long <- read.csv(file="*R*/data_long.csv",header=TRUE)
