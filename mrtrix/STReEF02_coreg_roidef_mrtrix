@@ -8,25 +8,26 @@
 -----------------------------------------------------------------------
 SECTION 1: prepare MRI, CT, and DWI data
 -----------------------------------------------------------------------
-# move only the necessary data from the the raw data folder ('DWI') and preprocess folder ('preprocess_DWI') to a designated co-registration and roi definition folder ('coreg_ROI'), one folder is made for each subject
+# move only the necessary data from the the raw data folder ('DATA_for_publication') and preprocess folder ('preprocess_DWI') to a designated co-registration and roi definition folder ('coreg_ROI'), one folder is made for each subject
 
 for subj in 0703 0749 0753 0778 0856 0882 0905 0928 0968 0978 0984 0992 0993
 do    
     Dir= coreg_ROI # see personalDataPath_mrtrix file for the exact dir (*coreg_ROI*)
     cd $Dir
     mkdir sub-RESP${subj}
-# copy the MRI acquired at the time of the DWI scan (the 'MRI-DWI') into the data folders
-    cp *DWI*/mrdata/DTI/{sub-RESP${subj}_Mansfield_T1W_1mm_SAG.PAR,sub-RESP${subj}_Mansfield_T1W_1mm_SAG.REC} *coreg_ROI*
-# convert the MRI-DWI from .PAR/REC to .mif format
     cd $Dir/sub-RESP${subj}
-    mrconvert sub-RESP${subj}_Mansfield_T1W_1mm_SAG.PAR -strides 1,2,3 MRI_DWI_sub-RESP${subj}.mif
+    
+# copy the MRI acquired at the time of the DWI scan (the 'MRI-DWI') into the data folders
+    cp *DATA_for_publication*/MRI_DWI_sub-RESP${subj}.mif *coreg_ROI*
 # convert the MRI-DWI from .mif to .nii format for the spm coregistration function
     mrconvert MRI_DWI_sub-RESP${subj}.mif -strides 1,2,3 MRI_DWI_sub-RESP${subj}.nii
+    
 # copy the MRI acquired before electrode implantation (the 'MRI-CT') and the CT scan acquired after electrode implantation into the data folders
-   cp *Chronic_ECoG*/{sub-RESP${subj}_ses-1_CT.nii,sub-RESP${subj}_ses-1_T1w.nii} *coreg_ROI*
+   cp *DATA_for_publication*/{sub-RESP${subj}_ses-1_CT.nii,sub-RESP${subj}_ses-1_T1w.nii} *coreg_ROI*
 # convert the MRI-CT and the CT from .nii to .mif format and make sure the ordering scheme of the data (the strides) are in RAS (right anterior posterior) format
     mrconvert sub-RESP${subj}_ses-1_T1w.nii -strides 1,2,3 sub-RESP${subj}_ses-1_T1w.mif
     mrconvert sub-RESP${subj}_ses-1_CT.nii -strides 1,2,3 sub-RESP${subj}_ses-1_CT.mif
+    
 # copy the preprocessed DWI data into the folders
     cp *Preprocess_DWI*/dwi_den_unr_preproc_unbiased.mif *coreg_ROI*
 # extract the mean b0 volume to use in the co-registration process 
@@ -94,6 +95,14 @@ do
     mrview CT_BIDS_sub-RESP${subj}_coreg.mif -roi.load coordinates_trans_CT.nii -roi.colour 3,207,252  -mode 2 
 done
 
+# you can also check the electrode coordinates with the 'MRI-DWI' and DWI scan to get a better idea
+for subj in 0703 0749 0753 0778 0856 0882 0905 0928 0968 0978 0984 0992 0993
+do    
+    Dir=coreg_ROI
+    cd $Dir/sub-RESP${subj}
+mrview MRI_DWI_sub-RESP${subj}_coreg.mif -roi.load coordinates_trans_mri.nii -roi.colour 3,207,252  -mode 2 
+mrview mean_b0_preprocessed.mif -roi.load coordinates_trans_dwi.nii -roi.colour 3,207,252  -mode 2 
+done
 
 # prepare anatomically constrained tractography (ACT)
 # use the MRI-DWI scan as the anatomical constraining image
@@ -117,30 +126,30 @@ done
 -----------------------------------------------------------------------
 SECTION 5:  check the region-of-interest/electrode contact area definition
 -----------------------------------------------------------------------
-# make sure you runned section 4 of the matlab file 'STReEF02_coreg_roidef_matlab.m' and the electrode contact area and volume data are saved in the designated co-registration and roi definition folder ('coreg_ROI')
-
 # make a sub-folder in the designated co-registration and roi definition folder ('coreg_ROI') for region-of-interest definition for clarity (not necessary..), one folder ('coordinate_roi') is made for each subject
 for subj in 0703 0749 0753 0778 0856 0882 0905 0928 0968 0978 0984 0992 0993
 do    
     Dir=coreg_ROI 
-    cd $Dir
+    cd $Dir/sub-RESP${subj}
     mkdir coordinate_roi
 done
+
+
+# make sure you runned section 4 of the matlab file 'STReEF02_coreg_roidef_matlab.m' and the electrode contact area and volume data are saved in the designated co-registration and roi definition folder ('coreg_ROI')
 
 # move the necessary data (the MRI-DWI, and the original and normal grey-white matter mask) from the main 'coreg_ROI' folder
 for subj in 0703 0749 0753 0778 0856 0882 0905 0928 0968 0978 0984 0992 0993  
 do
     Dir=coreg_ROI 
-    cd $Dir
+    cd $Dir/sub-RESP${subj}
 cp *coreg_ROI*/{MRI_DWI_sub-RESP${subj}_coreg.mif,check_logical.mif,gmwmSeed_mask.mif} /*coreg_ROI*/coordinate_roi
 done
 
 # check the prelimary electrode contact areas (all 64 mm3) and the final electrode contact areas (after handling overlap)
 for subj in 0703 0749 0753 0778 0856 0882 0905 0928 0968 0978 0984 0992 0993
-for subj in 0778
 do    
     Dir=coreg_ROI 
-    cd $Dir/coordinate_roi
+    cd $Dir/sub-RESP${subj}/coordinate_roi
     mrview MRI_DWI_sub-RESP${subj}_coreg.mif -interpolation 0 -roi.load coordinate_all.mif -roi.colour 3,207,252 -roi.load check_logical.mif -roi.colour 252,128,3 -mode 2 
     mrview MRI_DWI_sub-RESP${subj}_coreg.mif -interpolation 0 -roi.load coordinate_all_connectome.mif -roi.colour 3,207,252 -roi.load check_logical.mif -roi.colour 252,128,3 -mode 2 
 done
