@@ -319,6 +319,8 @@ cor_overlap_real = cor_overlap_real(1:3,:)';
 
 % remove per electrode contact area the voxels with overlap and assign each overlap voxel to the closest electrode contact area
 volume_roi= NaN(size(coordinates_trans,1),1); 
+roi_connectome = zeros(size(gmwm_mask.data));
+
 for cor = 1:size(coordinates_trans,1)
 [D2, I2] = pdist2(cor_mask_real,coordinates_trans(cor,:),'euclidean','Smallest',64); % compute the euclidian distance between the electrode contact coordinates and the gray-white matter boundary mask
 coordinate_roi = cor_mask_real(I2,:);
@@ -330,7 +332,6 @@ coordinate_roi = [coordinate_roi; cor_overlap_real(closest,:)]; % assign the vox
 end
 
 data2 = position2reslicedImage_mif_nosave(coordinate_roi,template,cor); % save the coordinates of the electrode contact areas and give those voxels a value, corresponsing to their electrode contact coordinate index
-roi_connectome = zeros(size(gmwm_mask.data));
 roi_connectome = roi_connectome+data2.data; % store all the coordinates of the final electrode contact areas in one volume
 
 %compute the final volume per electrode contact area (64 mm3 or less)
@@ -351,7 +352,7 @@ save([dir2 'volume_roi.txt'],'volume_roi','-ascii') % save the volume per electr
 save([dir2 'total_volume.txt'],'total_volume','-ascii') % save the volume of all electrode contact areas combined, per patient
 end
 
-clear check_logical closest coordinate_roi coordinates_trans cor cor_mask_real cor_overlap_real D2 D4 data data2 dir dir2 gmwm_mask I2 I4 logical_mask pos pos_mask pos_overlap roi roi_con_header roi_connectome roi_header template total_volume val volume_roi vox2real x2 x4 y2 y4 z2 z4
+clear one points check_logical closest coordinate_roi coordinates_trans cor cor_mask_real cor_overlap_real D2 D4 data data2 dir dir2 gmwm_mask I2 I4 logical_mask pos pos_mask pos_overlap roi roi_con_header roi_connectome roi_header template total_volume val volume_roi vox2real x2 x4 y2 y4 z2 z4
 %% SECTION 5: save the important variables of the whole file
 %% mrtrix warning
 warning('make sure you also run the final section of the twin written in mrtrix code (see STReEF02_coreg_roidef_mrtrix and run section 5)')
