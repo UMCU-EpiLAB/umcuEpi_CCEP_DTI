@@ -90,7 +90,7 @@ disp('runs merged')
 clear scored run subj stimsets stimchannels  n1_peak_sample n1_peak_amplitude
 
  %% SECTION 2: construct the effective and structural networks
-dataBase2 = construct_network(dataBase,myDataPath);
+dataBase = construct_network(dataBase,myDataPath);
 
 disp('networks constructed')
 
@@ -125,8 +125,13 @@ soz_ind = NaN(size(soz_include,1),1);
 for s = 1:size(soz_include,1)
     soz_in = soz_include(s);
     indx_soz = strcmpi(soz_in,ch_include); 
+    if isempty(find(indx_soz,1))
+        warning('soz channel is not included!') % toegevoegd 22/12/23 check nog waarom dit zo is
+    else
     soz_ind(s) = find(indx_soz); 
+    end
 end
+soz_ind = soz_ind(~isnan(soz_ind)); % toegevoegd 22/12/23
 dataBase(subj).soz.soz_ind = soz_ind;
 no_soz_ind = 1:size(ch_include,1);
 no_soz_ind(soz_ind) = NaN;
@@ -156,22 +161,22 @@ G_EC = graph(EC,ch_include);
 
 degree_SC = degree(G_SC);
 degree_EC = degree(G_EC);
-dataBase.network.degree_SC = degree_SC;
-dataBase.network.degree_EC = degree_EC;
-dataBase.network.degree_SC_soz = degree_SC(soz_ind);
-dataBase.network.degree_EC_soz = degree_EC(soz_ind);
-dataBase.network.degree_SC_nsoz = degree_SC(no_soz_ind);
-dataBase.network.degree_EC_nsoz = degree_EC(no_soz_ind);
+dataBase(subj).network.degree_SC = degree_SC;
+dataBase(subj).network.degree_EC = degree_EC;
+dataBase(subj).network.degree_SC_soz = degree_SC(soz_ind);
+dataBase(subj).network.degree_EC_soz = degree_EC(soz_ind);
+dataBase(subj).network.degree_SC_nsoz = degree_SC(no_soz_ind);
+dataBase(subj).network.degree_EC_nsoz = degree_EC(no_soz_ind);
 
 % betweennes centrality
 BC_SC = centrality(G_SC,'betweenness');
 BC_EC = centrality(G_EC,'betweenness');
-dataBase.network.BC_SC = BC_SC;
-dataBase.network.BC_EC = BC_EC;
-dataBase.network.BC_SC_soz = BC_SC(soz_ind);
-dataBase.network.BC_EC_soz = BC_EC(soz_ind);
-dataBase.network.BC_SC_nsoz = BC_SC(no_soz_ind);
-dataBase.network.BC_EC_nsoz = BC_EC(no_soz_ind);
+dataBase(subj).network.BC_SC = BC_SC;
+dataBase(subj).network.BC_EC = BC_EC;
+dataBase(subj).network.BC_SC_soz = BC_SC(soz_ind);
+dataBase(subj).network.BC_EC_soz = BC_EC(soz_ind);
+dataBase(subj).network.BC_SC_nsoz = BC_SC(no_soz_ind);
+dataBase(subj).network.BC_EC_nsoz = BC_EC(no_soz_ind);
 end
 clear G_SC G_EC ch elec_include ch_include soz_ind no_soz_ind SC EC sub_label degree_SC degree_EC BC_SC BC_EC
 %% node proximity
@@ -242,9 +247,9 @@ epi(soz_ind) = 1; % if the channel is in the SOZ or not
 epi(no_soz_ind) = 0;
 
 data_long(i:i+sz-1,1)= str2double(sub_label)*ones(sz,1); % patient RESP numbers
-data_long(i:i+sz-1,2)= dataBase.network.degree_SC; % degree structural networks
-data_long(i:i+sz-1,3)= dataBase.network.degree_EC; % degree effective networks
-data_long(i:i+sz-1,4)= dataBase.network.node_proximity;
+data_long(i:i+sz-1,2)= dataBase(subj).network.degree_SC; % degree structural networks
+data_long(i:i+sz-1,3)= dataBase(subj).network.degree_EC; % degree effective networks
+data_long(i:i+sz-1,4)= dataBase(subj).network.node_proximity;
 data_long(i:i+sz-1,5)= volume; % volume per electrode contact area
 data_long(i:i+sz-1,6)= epi; % if the channel is in the SOZ or not
 data_long(i:i+sz-1,7)= channels; % channel names
