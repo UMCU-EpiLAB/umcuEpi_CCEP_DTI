@@ -1,10 +1,11 @@
-function V = visual_topography(vector_v1, vector_v2, v1_soz, v1_nsoz, v2_soz, v2_nsoz,subj)
+function V = visual_topography(vector_v1, vector_v2, v1_soz, v1_nsoz, v2_soz, v2_nsoz,subj,i,j)
 % INPUT:
 % cfg.sub_label = {'RESPXXXX', 'RESPXXXX'}
 % vector_v1 = topography vector modality 1
 % vector_v2 = topography vector modality 2
 % v1_soz = topography vector soz channels
 % v1_nsoz = topography vector outside soz channels
+% i,j = place in the figure/subject
 
 % OUTPUT:
 % V: figure with 1 subplots per patient
@@ -15,13 +16,13 @@ function V = visual_topography(vector_v1, vector_v2, v1_soz, v1_nsoz, v2_soz, v2
 % Visualize the correlation between a topography measure from structural and effective networks
 
 markers = ['o';'+';'*';'.';'x';'s';'d';'p';'^';'v';'>';'<';'_'];
-i=0;j=0; 
+
 set(gcf,'renderer','Painters')
 V = figure(2);
 V.WindowState = 'maximized';
-i=i+1;j=j+1;
+ 
+ subplot(2,2,i)
 
-subplot(4,2,i)
 
 ns = scatter(v1_nsoz,v2_nsoz,60,'LineWidth', 1.8); 
 color = 'k'; %[0.7,0.7,0.7];
@@ -35,12 +36,23 @@ s.Marker = markers(subj);
 
 yt = get(gca, 'YTick');
 xt = get(gca, 'XTick');
-xlim([0,round(max(vector_v1)/5)*5])
-set(gca, 'XTick',[min(xt),round(max(vector_v1/2)/5)*5,round(max(vector_v1)/5)*5])%numelxt
-set(gca, 'XTickLabel',[min(xt),round(max(vector_v1/2)/5)*5,round(max(vector_v1)/5)*5])%numelxt
+xlim([0,round(max([vector_v1;vector_v2])/5)*5])
+ylim([0,round(max([vector_v1;vector_v2])/5)*5])
 
-set(gca, 'YTick',[min(yt),round(max(vector_v2/2)/5)*5,round(max(vector_v2)/5)*5])
-set(gca, 'YTickLabel',[min(yt),round(max(vector_v2/2)/5)*5,round(max(vector_v2)/5)*5])
+set(gca, 'XTick',[0,round(max([vector_v1;vector_v2]/2)/5)*5,round(max([vector_v1;vector_v2])/5)*5])%numelxt
+set(gca, 'XTickLabel',[0,round(max([vector_v1;vector_v2]/2)/5)*5,round(max([vector_v1;vector_v2])/5)*5])%numelxt
+
+set(gca, 'YTick',[0,round(max([vector_v1;vector_v2]/2)/5)*5,round(max([vector_v1;vector_v2])/5)*5])
+set(gca, 'YTickLabel',[0,round(max([vector_v1;vector_v2]/2)/5)*5,round(max([vector_v1;vector_v2])/5)*5])
+
+% xlim([0,round(max(vector_v1)/5)*5])
+% 
+% set(gca, 'XTick',[min(xt),round(max(vector_v1/2)/5)*5,round(max(vector_v1)/5)*5])%numelxt
+% set(gca, 'XTickLabel',[min(xt),round(max(vector_v1/2)/5)*5,round(max(vector_v1)/5)*5])%numelxt
+% 
+% set(gca, 'YTick',[min(yt),round(max(vector_v2/2)/5)*5,round(max(vector_v2)/5)*5])
+% set(gca, 'YTickLabel',[min(yt),round(max(vector_v2/2)/5)*5,round(max(vector_v2)/5)*5])
+axis square
 
 [P,S] = polyfit(vector_v1,vector_v2,1);
 [y_fit, delta] = polyval(P,vector_v1,S);
@@ -64,10 +76,12 @@ color = [0.99 0.38 0.22];
 
 % plot polyfit throught data points
 plot(vector_v1,y_fit,'Color',color,'LineWidth',2)
-set(gca, 'FontSize',12)
+set(gca, 'FontSize',12) %12
 
-if ismember(subj,[1,6,8,9,10])
-    title(sprintf('%s Degree patient %g, p %s , r_{s}= %g','ECoG',j,PVAL,round(RHO,2)))
-else
-title(sprintf('%s Degree patient %g, p %s , r_{s}= %g','sEEG',j,PVAL,round(RHO,2)))
+title(sprintf('p %s , r_{s}= %g', PVAL,round(RHO,2)))
+
+% if ismember(subj,[1,6,8,9,10])
+%     title(sprintf('%s Degree patient %g, p %s , r_{s}= %g','ECoG',i,PVAL,round(RHO,2)))
+% else
+% title(sprintf('%s Degree patient %g, p %s , r_{s}= %g','sEEG',i,PVAL,round(RHO,2)))
 end
