@@ -85,12 +85,18 @@ clear scored run subj stimsets stimchannels  n1_peak_sample n1_peak_amplitude
 %% visualize the inter-modal similarity with connectivity matrices
 
 for subj = 1:size(dataBase,2)
-V = visual_networks(dataBase(subj).network.SC_matrix,dataBase(subj).network.EC_matrix,dataBase(subj).sub_label) % function to plot the connectivity matrices
+V = visual_networks(dataBase(subj).network.SC_matrix,dataBase(subj).network.EC_matrix,dataBase(subj).sub_label,i) % function to plot the connectivity matrices
 V.WindowState = 'maximized';
 print('-vector','-depsc',V,sprintf('visual_networks_symetric%s',dataBase(subj).sub_label))% save the figure for further processing with Adobe Illustrator
 end
-%%  visualize the network topography per patient (must become a function)
+
+
+%%  visualize the network topography for all patients
+
+i=0; 
 for subj = 1:size(dataBase,2)
-V = visual_topography(dataBase(subj).network.degree_EC, dataBase(subj).network.degree_SC, dataBase(subj).network.degree_EC_soz, dataBase(subj).network.degree_EC_nsoz,dataBase(subj).network.degree_SC_soz, dataBase(subj).network.degree_SC_nsoz,subj)
-saveas(V,'correlation degree all','epsc') % save the figure for further processing with Adobe Illustrator
+i=i+1
+V = visual_topography(dataBase(subj).network.degree_EC, dataBase(subj).network.degree_SC, dataBase(subj).network.degree_EC_soz, dataBase(subj).network.degree_EC_nsoz,dataBase(subj).network.degree_SC_soz, dataBase(subj).network.degree_SC_nsoz,subj,i)
 end
+
+saveas(V,'correlation degree all','epsc') % save the figure for further processing with Adobe Illustrator
