@@ -11,7 +11,7 @@ function V = visual_networks(matrix_m1, matrix_m2, sublabel)
 % 3: the union (orange) and intersection (blue & green) of the two visual
 % 
 % Visualize the inter-modal similarity between structural and effective networks
-V = figure (1);
+V = figure ();
 V.WindowState = 'maximized';
 f =17;
 ax1 = subplot(1,3,1);
