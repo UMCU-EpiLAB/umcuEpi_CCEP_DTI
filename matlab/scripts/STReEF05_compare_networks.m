@@ -87,14 +87,14 @@ for subj= 1:size(dataBase,2)
 end
 
 disp('runs merged')
-clear scored run subj stimsets stimchannels  n1_peak_sample n1_peak_amplitude
+clear scored run subj stimsets stimchannels  n1_peak_sample n1_peak_amplitude data run_label
 
  %% SECTION 2: construct the effective and structural networks
 dataBase = construct_network(dataBase,myDataPath);
 
 disp('networks constructed')
 
-%% SECTION 3: calculate the inter-modal similarity and prepare for the Jaccard Index calculation in R
+%% SECTION 3: calculate the inter-modal similarity, prepare for the Jaccard Index calculation in R, calculate the ratio of structural and effective connections that did not overlap
 JI = zeros(size(dataBase,2,1)); JI_expected = zeros(size(dataBase,2,1));JI_parker = zeros(size(dataBase,2,1));JI_alternative = zeros(size(dataBase,2,1));
 for subj=1:size(dataBase,2)
 dataPath = myDataPath.DWIMATLABpath; 
@@ -105,6 +105,42 @@ dir = [dataPath dataBase(subj).sub_label];
 
 end
 clear dataPath sub_label dir subj 
+
+% ratio of structural and effective connections that did not overlap
+% The ratio between structural and effective connections in the set of symmetric difference connections was calculated with: 
+% Ratio_SC∆EC=log_10⁡((SC-(SC⋂EC))/(EC-(SC⋂EC))) with SC and EC the structural and effective connectivity matrixes, 
+% and a ratio between 0 (equal amount of structural and effective connections) and ±∞ (zero structural or zero effective connections).
+
+ratio = zeros(size(dataBase,2,1)); 
+for subj=1:size(dataBase,2)
+
+intersecting = dataBase(subj).dwi.SC_matrix - dataBase(subj).ccep.EC_matrix;
+
+ratio(subj) = log10(sum(sum(intersecting == 1))/sum(sum(intersecting == -1))); %structural divided by effective
+end
+
+% change the order of the subject such that ecog are the first 5
+j =1;
+for i = [1,6,8,9,10,2,3,4,5,7,11,12,13] 
+    ratio_streef(j,1) = ratio(i);
+    j=1+j;
+end
+clear ratio intersecting j i subj 
+
+V = figure('Renderer', 'painters', 'Position', [600 300 600 400]);
+w = [1.02 1 0.98 1 1 ]; % make a XJitter such that the individual points do not overlap
+scatter(w,ratio_streef(1:5),40,'o','k')
+hold on
+v = [0.74 0.7 0.7 0.7 0.7 0.6 0.7 0.67]; % make a XJitter such that the individual points do not overlap
+scatter(v,ratio_streef(6:13),400,'.','k','LineWidth', 1.8,'MarkerFaceAlpha',1,'MarkerEdgeAlpha',1)
+hold on 
+yline(0)
+ylim([-1.1 1.1])
+xlim([-1 2])
+
+saveas(V,'ratio','epsc') % save the figure for further processing with Adobe Illustrator
+
+clear ratio_streef JI JI_alternative JI_expected JI_parker v w V
 
 %% R warning
 warning('run now R code in STReEF05_compare_networks_R and run section 1)')
