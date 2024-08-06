@@ -85,18 +85,79 @@ clear scored run subj stimsets stimchannels  n1_peak_sample n1_peak_amplitude
 %% visualize the inter-modal similarity with connectivity matrices
 
 for subj = 1:size(dataBase,2)
-V = visual_networks(dataBase(subj).network.SC_matrix,dataBase(subj).network.EC_matrix,dataBase(subj).sub_label,i) % function to plot the connectivity matrices
+V = visual_networks(dataBase(subj).network.SC_matrix,dataBase(subj).network.EC_matrix,dataBase(subj).sub_label) % function to plot the connectivity matrices
 V.WindowState = 'maximized';
 print('-vector','-depsc',V,sprintf('visual_networks_symetric%s',dataBase(subj).sub_label))% save the figure for further processing with Adobe Illustrator
 end
 
-
-%%  visualize the network topography for all patients
-
-i=0; 
-for subj = 1:size(dataBase,2)
+%%  visualize the network topography for all patients degree
+i=0;j=0; 
+for subj =[1,6,8,9,10]; %[2,3,4,5,7,11] %seeg1 %[12,13] seeg2 %[1,6,8,9,10]grid % 
 i=i+1
+
 V = visual_topography(dataBase(subj).network.degree_EC, dataBase(subj).network.degree_SC, dataBase(subj).network.degree_EC_soz, dataBase(subj).network.degree_EC_nsoz,dataBase(subj).network.degree_SC_soz, dataBase(subj).network.degree_SC_nsoz,subj,i)
 end
+saveas(V,'correlation degree grid','epsc') % save the figure for further processing with Adobe Illustrator
 
-saveas(V,'correlation degree all','epsc') % save the figure for further processing with Adobe Illustrator
+%%  visualize the network topography for all patients betweenness centrality
+i=0;j=0; 
+for subj = [1,6,8,9,10]; %[2,3,4,5,7,11] %seeg1 %[12,13] seeg2 %[1,6,8,9,10]grid %
+i=i+1
+
+V = visual_topography(dataBase(subj).network.BC_EC, dataBase(subj).network.BC_SC, dataBase(subj).network.BC_EC_soz, dataBase(subj).network.BC_EC_nsoz,dataBase(subj).network.BC_SC_soz, dataBase(subj).network.BC_SC_nsoz,subj,i)
+end
+saveas(V,'correlation BC seeg2','epsc') % save the figure for further processing with Adobe Illustrator
+
+%%  visualize the network topography for all patients node proximity
+i=0;j=0; 
+for subj = [1,6,8,9,10] %1:size(dataBase,2)  [5,7,11,12]13[1,6,8,9][10,2,3,4]
+i=i+1
+np_soz = dataBase(subj).network.node_proximity(dataBase(subj).network.soz.soz_ind) ;
+np_nsoz = dataBase(subj).network.node_proximity(dataBase(subj).network.soz.no_soz_ind) ; 
+V = visual_topography_np(dataBase(subj).network.node_proximity, dataBase(subj).network.degree_EC, np_soz, np_nsoz ,dataBase(subj).network.degree_EC_soz, dataBase(subj).network.degree_EC_nsoz,subj,i)
+end
+%saveas(V,'correlation np effective grid','epsc') % save the figure for further processing with Adobe Illustrator
+
+%%  visualize the network topography for all patients volume of electrode contact areas (VEA)
+i=0;j=0; 
+for subj = [12,13] %seeg2 %[1,6,8,9,10]grid [2,3,4,5,7,11] %seeg1 %
+i=i+1
+np_soz = dataBase(subj).dwi.volume_roi(dataBase(subj).network.soz.soz_ind) ;
+np_nsoz = dataBase(subj).dwi.volume_roi(dataBase(subj).network.soz.no_soz_ind) ; 
+V = visual_topography_np(dataBase(subj).dwi.volume_roi, dataBase(subj).network.degree_SC, np_soz, np_nsoz ,dataBase(subj).network.degree_SC_soz, dataBase(subj).network.degree_SC_nsoz,subj,i)
+end
+saveas(V,'correlation VEA structural seeg2','epsc') % save the figure for further processing with Adobe Illustrator
+
+%% Histogram of the volume of electrode contact areas
+i=0;j=0; 
+for subj = [2,3,4,5,7,11] %[2,3,4,5,7,11] %seeg1 %[12,13] seeg2 %[1,6,8,9,10]grid
+i=i+1;
+set(gcf,'renderer','Painters')
+V = figure(1);
+V.WindowState = 'maximized';
+ 
+subplot(2,3,i)
+
+vea_soz = dataBase(subj).dwi.volume_roi(dataBase(subj).network.soz.soz_ind) ;
+vea_nsoz = dataBase(subj).dwi.volume_roi(dataBase(subj).network.soz.no_soz_ind) ; 
+histogram(vea_nsoz,'BinWidth',16,'BinLimits',[0,64],'FaceColor','k','FaceAlpha',1,"LineStyle","-") % plot volume electrode contact areas
+axis square
+yt = get(gca, 'YTick');
+xt = get(gca, 'XTick');
+hold on
+if ~isempty(vea_soz)
+histogram(vea_soz,'BinWidth',16,'BinLimits',[0,64],'FaceColor',[204/250 37/250 41/250],'FaceAlpha',1,'EdgeColor','none') % plot volume electrode contact areas in the soz
+end
+histogram(vea_nsoz,'BinWidth',16,'BinLimits',[0,64],'EdgeColor','k','DisplayStyle','stairs') % plot line histogram of non soz for when soz counts overlap the non soz counts
+
+xlim([0,64])
+
+set(gca, 'XTick',[0,16,32,48,64])
+set(gca, 'XTickLabel',[0,16,32,48,64])
+set(gca, 'YTick',[0,max(yt)/2,max(yt)])     
+set(gca, 'YTickLabel',[0,max(yt)/2,max(yt)])
+set(gca, 'FontSize',16) 
+end
+saveas(V,'histogram VEA seeg1','epsc') % save the figure for further processing with Adobe Illustrator
+
+clear vea_nsoz w xt yt V vea_soz i j subj
