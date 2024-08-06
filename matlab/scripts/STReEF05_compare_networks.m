@@ -123,6 +123,8 @@ end
 j =1;
 for i = [1,6,8,9,10,2,3,4,5,7,11,12,13] 
     ratio_streef(j,1) = ratio(i);
+    JI_streef(j,1) = JI(i);
+    JI_expected_streef(j,1) = JI_expected(i);
     j=1+j;
 end
 clear ratio intersecting j i subj 
