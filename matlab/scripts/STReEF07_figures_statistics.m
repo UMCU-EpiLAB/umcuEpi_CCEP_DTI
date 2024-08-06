@@ -47,7 +47,7 @@ clear clbar color data_all data_llm1 data_llm2 data_llm3 f1 stat_tresh stat_tres
 %jaccard index
 pt = 1:13;
 JI_exp= [0.14;0.14;0.23;0.10;0.19;0.08;0.05;0.15;0.05;0.08;0.20;0.06;0.07];
-JI_obsv = [0.19;0.26;0.38;0.18;0.36;0.27;0.17;0.28;0.22;0.19;0.30;0.23;0.25];
+JI_obsv = [0.19;0.26;0.38;0.18;0.37;0.27;0.17;0.28;0.22;0.19;0.30;0.23;0.25];
 
 f1= figure(1);
 s = scatter(pt,JI_exp,300,'LineWidth', 1.8); 
