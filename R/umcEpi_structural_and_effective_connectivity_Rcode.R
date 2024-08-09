@@ -111,6 +111,8 @@ path = paste(dir,'data_long_LMM.csv',sep = '')
 data_long = read.csv(file=path,header=TRUE)
 
 # construct a linear multilevel model with backward elimination of possible predictors. The possible predictors at patient level were the effective network characteristic, the node proximity, the volume of the structural electrode contact areas, and the nodes in the seizure onset zone (SOZ). We added each variable as fixed effect to the model. The variable with the highest p-value was removed at each step until all variables had a p-value<0.05. 
+df <- data.frame(matrix(nrow = 5, ncol = 14))
+names(df) <- c("lmm1_predictor", "lmm1_t_value", "lmm2_predictor", "lmm2_t_value", "lmm3_predictor", "lmm3_t_value", "lmm_final_predictor", "lmm_final_t_value", "lmm_final_coef", "lmm_final_CI_low", "lmm_final_CI_high", "lmm_final_p" , 'statistical_tresh', 'ICC')
 
 # intercept only model
 interceptonlymodel = lmer(formula = SCD ~ 1 + (1|subj) , data = data_long) 
@@ -118,8 +120,7 @@ summary(interceptonlymodel) #to get parameter estimates.
 
 # ICC
 RandomEffects = as.data.frame(VarCorr(interceptonlymodel))
-ICC_between = RandomEffects[1,4]/(RandomEffects[1,4]+RandomEffects[2,4]) 
-ICC_between
+df$ICC[1] = RandomEffects[1,4]/(RandomEffects[1,4]+RandomEffects[2,4]) 
 
 # model with all predictors and 11 subjects degree (Degree effective networks) + Node proximity + volume(Volume electrode areas) + epi(SOZ nodes) 
 data_long_11 = subset(data_long,!(subj == 9|subj==13))
@@ -128,33 +129,42 @@ model1 = lmer(formula = SCD ~ 1 + ECD + NP + VEA + SOZ +(1|subj),
                data    = data_long_11) 
 summary(model1)
 model1_par = parameters::parameters(model1)
-t1 = model1_par$t
-p1 = model1_par$Parameter
+df$lmm1_predictor = model1_par$Parameter[1:5]
+df$lmm1_t_value = model1_par$t[1:5]
+
 
 model2 <- lmer(formula = SCD ~ 1 + ECD + NP + SOZ + (1|subj), 
                data    = data_long_11) # without VEA
 summary(model2)
 model2_par = parameters::parameters(model2)
-
+df$lmm2_predictor[1:4] = model2_par$Parameter[1:4]
+df$lmm2_t_value[1:4] = model2_par$t[1:4]
 
 model3 <- lmer(formula = SCD ~ 1 + ECD + NP + (1|subj), #final model 11 pt
                data    = data_long_11)
 summary(model3)
 model3_par = parameters::parameters(model3)
+df$lmm3_predictor[1:3] = model3_par$Parameter[1:3]
+df$lmm3_t_value[1:3] = model3_par$t[1:3]
 
 model4 <- lmer(formula = SCD ~ 1 + ECD + NP + (1|subj), #final model all pt
                data    = data_long)
 summary(model4)
 
 model4_par = parameters::parameters(model4)
+df$lmm_final_predictor[1:3] = model4_par$Parameter[1:3]
+df$lmm_final_t_value[1:3] = model4_par$t[1:3]
+df$lmm_final_coef[1:3] = model4_par$Coefficient[1:3]
+df$lmm_final_CI_low[1:3] = model4_par$CI_low[1:3]
+df$lmm_final_CI_high[1:3] = model4_par$CI_high[1:3]
+df$lmm_final_p[1:3] = model4_par$p[1:3]
+
 
 # statistica; treshold t-value with p-value 0.01 and df around 670
-tresh = qt(0.05,670)
-
-data = data.frame('Statistical Treshold'= tresh, 'IC' = ICC_between, 'model1 par' = p1, 'model1 t' = t1, 'final_model_par'=model4_par)
+df$statistical_tresh[1] = qt(0.05,670)
 
 path = paste(dir,'LLMdata_R.csv',sep = '')
-write.csv(data, path)
+write.csv(df, path)
 
 
 
