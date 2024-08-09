@@ -172,6 +172,7 @@ clear data_long data_l data_Path sz soz soz_all subj i names_data nr_channels si
 warning('run now R code in STReEF05_compare_networks_R and run section 2)')
 
 % linear mixed model (verbeter nog!)
+data_lmm = readtable("LLMdata_R.csv");
 data_llm1 = [2.259;-3.695;0.091;-1.010]; %11 subj Degree Structural Connectivity ~ 1 * ß0+ Degree Effective Connectivity * ßDEC+ Node Proximity * ßNP + Volume Electrode Area * ßVEA + Seizure Onset Zone nodes * ßSOZ + (1 * ß0 | Subject)Degree Structural Connectivity ~ 1 * ß0+ Degree Effective Connectivity * ßDEC+ Node Proximity * ßNP + Volume Electrode Area * ßVEA + Seizure Onset Zone nodes * ßSOZ + (1 * ß0 | Subject)
 data_llm2 = [2.258;-3.7;NaN;-1.010];
 data_llm3 = [2.190;-3.585;NaN;NaN];
