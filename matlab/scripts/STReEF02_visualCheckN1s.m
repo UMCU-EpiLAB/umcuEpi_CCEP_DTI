@@ -1,7 +1,6 @@
 % STReEF02_visualcheckN1s
 % This matlab code is developed for the manuscript 'Structural and
 % Effective brain connectivity in focal epilepsy' by Jelsma et al. 
-% detect CCEPs in either cECoG or sEEG data
 
 % author: Dorien van Blooijs & Susanne Jelsma
 % date: October 2021
