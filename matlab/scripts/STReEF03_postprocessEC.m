@@ -64,16 +64,7 @@ for subj= 1:size(dataBase,2)
                 run1 = rmfield(run1,fields);run2 = rmfield(run2,fields);
                 if ~isequal(dataBase(subj).ccep_m(1).ccep.ch,dataBase(subj).ccep_m(run).ccep.ch)
                         warning('channels %s are not equal to the first run',dataBase(subj).ccep(run).run_label)
-                end
-                % if ~isequal(dataBase(subj).ccep_m(1).tb_channels,dataBase(subj).ccep_m(run).tb_channels)
-                %         warning('bad channels %s are not equal to the first run',dataBase(subj).ccep_m(run).run_label)
-                % for i = 1:size(dataBase(subj).ccep_m(1).tb_channels.status,1)
-                %    if ~isequal(dataBase(subj).ccep_m(1).tb_channels.status(i),dataBase(subj).ccep_m(run).tb_channels.status(i))
-                %    disp(dataBase(subj).ccep_m(1).tb_channels.status(i))
-                %    dataBase(subj).ccep(1).tb_channels.status(i) = {'bad'};
-                %    end
-                % end
-                % end
+                end            
                 if ~isequal(run1,run2)
                         warning('parameters %s are not equal to the first run',dataBase(subj).ccep_m(run).run_label)
                 end
@@ -101,9 +92,7 @@ if any(contains(fieldnames(dataBase(subj).tb_electrodes),'graymatter')) % select
     [elec_include{idx_all==0}] = deal('yes'); % yes in elec_include vector if it is something else (options: graymatter, hippocampus, amygdala, lesion, or gliosis)
 elseif any(contains(dataBase(subj).tb_electrodes.group,'grid')) % select grid patients
     idx_silicon = strcmpi(dataBase(subj).tb_electrodes.silicon,'yes');% remove electrodes who are laying on other electrodes (silicon)
-    %idx_bad = strcmpi(dataBase(subj).ccep.tb_channels.status,'bad'); % remove bad channels from analysis because you cannot make extract CCEPs from it, so you cannot compare it to the structural networks
-    %idx_all = sum([idx_silicon, idx_bad],2);
-    idx_all = sum([idx_silicon],2);
+    idx_all = sum(idx_silicon,2);
 
 
     elec_include = cell(size(dataBase(subj).tb_electrodes,1),1);
@@ -123,21 +112,6 @@ end
 
 clear stimchannels chan_include elec_include elec_indx idx_all idx_bad bad idx_csf idx_screw idx_silicon idx_whitematter j i subjs run
 
-%% compare elec_include
-order = [1,6,8,9,10,2,3,4,5,7,11,12,13] ;
-
-for subj = 1:size(dataBase,2)
-elec_in_new = dataBase(order(subj)).ccep.elec_include;
-ch_new = dataBase(order(subj)).tb_electrodes.name;
-elec_in_oud = dataMain(subj).elec_include;
-ch_oud = dataMain(subj).tb_electrodes.name;
-if ~isequal(ch_new,ch_oud)
-                        warning('channels %s are not equal to the old',dataBase(order(subj)).sub_label)
-end
-if ~isequal(elec_in_new,elec_in_oud)
-                        warning('elec_include %s are not equal to the old',dataBase(order(subj)).sub_label)
-end
-end
 %% make a symmetric bi-directional effective connectivity network
 dataBase = construct_network(dataBase);
 
