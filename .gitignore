@@ -10,4 +10,4 @@ desktop.ini
 *.asv
 
 # No personalDataPath
-personalDataPath.m
+*personalDataPath.m
