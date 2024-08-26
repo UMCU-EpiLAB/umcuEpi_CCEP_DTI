@@ -1,26 +1,35 @@
+% function to re-reference the data
+
+% author: Dorien van Blooijs
+% date: June 2019
+
+% find 10 signals in the same stimulus trial with lowest variance and not
+% being a bad channel and use that as reference signal to increase the
+% signal-to-noise ratio
+
 function dataBase = rerefCCEPdata(dataBase,subj,run,cfg)
 
 fs = dataBase(subj).metadata(run).ccep_header.Fs;
 tt = (1:cfg.epoch_length*fs)/fs - cfg.epoch_prestim;
 
-for stimp = 1:size(dataBase(subj).metadata(run).cc_epoch_sorted,3) % for each stimulus pair
+for nStimp = 1:size(dataBase(subj).metadata(run).cc_epoch_sorted,3) % for each stimulus pair
 
-    these_epochs_data = squeeze(dataBase(subj).metadata(run).cc_epoch_sorted(:,:,stimp,:));
+    these_epochs_data = squeeze(dataBase(subj).metadata(run).cc_epoch_sorted(:,:,nStimp,:));
     these_epochs_data_reref = NaN(size(these_epochs_data));
 
-    stimChan = dataBase(subj).metadata(run).cc_stimsets(stimp,:);
+    stimChan = dataBase(subj).metadata(run).cc_stimsets(nStimp,:);
     these_epochs_data(stimChan,:,:) = NaN;
 
-    for numstim = 1:size(these_epochs_data,2) % for each of the trials of one stimulus pair
+    for nTrial = 1:size(these_epochs_data,2) % for each of the trials of one stimulus pair
 
         % calculate common avarage reference
-        CAR = squeeze(mean(these_epochs_data(:,numstim,:),1,'omitnan'));
+        CAR = squeeze(mean(these_epochs_data(:,nTrial,:),1,'omitnan'));
 
         % calculate the variance in 400ms prior to stimulus and
         % during 100ms post stimulus
         varCARprio = var(CAR(tt>-0.5&tt<-0.1));
-        varChanprio = var(squeeze(these_epochs_data(:,numstim,tt>-0.5&tt<-0.1)),[],2,'omitnan');
-        varChanccep = var(squeeze(these_epochs_data(:,numstim,find(tt>0.01,1):find(tt<0.1,1,'last'))),[],2,'omitnan');
+        varChanprio = var(squeeze(these_epochs_data(:,nTrial,tt>-0.5&tt<-0.1)),[],2,'omitnan');
+        varChanccep = var(squeeze(these_epochs_data(:,nTrial,find(tt>0.01,1):find(tt<0.1,1,'last'))),[],2,'omitnan');
 
         % determine which channels have a variance lower than
         % the CAR
@@ -39,20 +48,20 @@ for stimp = 1:size(dataBase(subj).metadata(run).cc_epoch_sorted,3) % for each st
         % 10% of the total amount of channels
         totChan = sum(~isnan(these_epochs_data(:,1,1)))+2; %total good channels, including the two stimulus channels
         usedCAR = [find(idx_usedCAR ==1); sort_varChan_excl_usedCAR(1:(ceil(0.1*totChan)-sum(idx_usedCAR)))];
-        CARlowvar = squeeze(median(these_epochs_data(usedCAR,numstim,:),1,'omitnan'));
+        CARlowvar = squeeze(median(these_epochs_data(usedCAR,nTrial,:),1,'omitnan'));
 
-        these_epochs_data_reref(:,numstim,:) = squeeze(these_epochs_data(:,numstim,:)) - repmat(transpose(CARlowvar),[size(these_epochs_data,1),1]);
+        these_epochs_data_reref(:,nTrial,:) = squeeze(these_epochs_data(:,nTrial,:)) - repmat(transpose(CARlowvar),[size(these_epochs_data,1),1]);
 
-        dataBase(subj).metadata(run).ref(:,numstim,stimp,:) = CARlowvar;
+        dataBase(subj).metadata(run).ref(:,nTrial,nStimp,:) = CARlowvar;
 
     end
 
     % re-reference the individual trials
-    dataBase(subj).metadata(run).cc_epoch_sorted_reref(:,:,stimp,:) = these_epochs_data_reref;
+    dataBase(subj).metadata(run).cc_epoch_sorted_reref(:,:,nStimp,:) = these_epochs_data_reref;
 
     fprintf('--- Stimpair %s-%s ---\n', ...
-        dataBase(subj).metadata(run).cc_stimchans{stimp,1},...
-        dataBase(subj).metadata(run).cc_stimchans{stimp,2})
+        dataBase(subj).metadata(run).cc_stimchans{nStimp,1},...
+        dataBase(subj).metadata(run).cc_stimchans{nStimp,2})
 
 end
 
