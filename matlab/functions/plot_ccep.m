@@ -1,4 +1,4 @@
-function H = plot_ccep(dataBase,subj,run,cfg,tt,chan,stimp)
+function H = plot_ccep(dataBase,subj,run,tt,chan,stimp)
 % figure with left the epoch, and right zoomed in
 H=figure(1);
 H.Units = 'normalized';
@@ -27,15 +27,10 @@ fill([tt(tt>=0 & tt<0.01) flip(tt(tt>=0 & tt<0.01))],...
 % plot the window in which the n1-CCEP should be scored
 plot(tt(find(tt<0.1,1,'last'))*ones(2,1),[-2000 2000],'k-');
 
-% plot average signal and re-ref signal if signal is
-% re-referenced(if not re-referenced, average signal is
-% identical to signal in re-ref average signal.
-if strcmp(cfg.reref,'y')
-    plot(tt,squeeze(dataBase(subj).metadata(run).cc_epoch_sorted_avg(chan,stimp,:)),'k-.','linewidth',1);
-    plot(tt,squeeze(dataBase(subj).metadata(run).cc_epoch_sorted_reref_avg(chan,stimp,:)),'k','linewidth',2);
-else
-    plot(tt,squeeze(dataBase(subj).metadata(run).cc_epoch_sorted_avg(chan,stimp,:)),'k','linewidth',2);
-end
+% plot average signal and re-ref signal
+plot(tt,squeeze(dataBase(subj).metadata(run).cc_epoch_sorted_avg(chan,stimp,:)),'k-.','linewidth',1);
+plot(tt,squeeze(dataBase(subj).metadata(run).cc_epoch_sorted_reref_avg(chan,stimp,:)),'k','linewidth',2);
+
 set(gca,'Fontsize',14)
 
 hold off
@@ -53,9 +48,7 @@ title(sprintf('Electrode %s, stimulating %s-%s',...
 subplot(1,2,2)
 h1 = fill([tt(tt0:tt1) tt(tt1:-1:tt0)],[low_ci(tt0:tt1) high_ci(tt1:-1:tt0)],'r','LineStyle','none','FaceAlpha',0.2);
 hold on
-for l = 1:size(usedSignal,1)
-h2 = plot(tt,usedSignal(l,:),':','LineWidth',1.5); % individual responses/
-end
+h2 = plot(tt,usedSignal,':','LineWidth',1.5); % individual responses/
 
 plot(tt,low_ci,'-','Color',[0.5 0.5 0.5],'LineWidth',1) % plot confidence interval
 plot(tt,high_ci,'-','Color',[0.5 0.5 0.5],'LineWidth',1)
@@ -67,33 +60,17 @@ fill([tt(tt>=0 & tt<0.01) flip(tt(tt>=0 & tt<0.01))],...
 % plot the window in which the n1-CCEP should be scored
 h6 = plot(tt(find(tt<0.1,1,'last'))*ones(2,1),[-750 750],'k-');
 
-% plot average signal and re-ref signal if signal is
-% re-referenced(if not re-referenced, average signal is
-% identical to signal in re-ref average signal.
-if strcmp(cfg.reref,'y')
-    h3 = plot(tt,squeeze(dataBase(subj).metadata(run).cc_epoch_sorted_avg(chan,stimp,:)),'k-.','linewidth',1);
-    h4 = plot(tt,squeeze(dataBase(subj).metadata(run).cc_epoch_sorted_reref_avg(chan,stimp,:)),'k','linewidth',2);
-else
-    h3 = plot(tt,squeeze(dataBase(subj).metadata(run).cc_epoch_sorted_avg(chan,stimp,:)),'k','linewidth',2);
-end
+% plot average signal and re-ref signal
+h3 = plot(tt,squeeze(dataBase(subj).metadata(run).cc_epoch_sorted_avg(chan,stimp,:)),'k-.','linewidth',1);
+h4 = plot(tt,squeeze(dataBase(subj).metadata(run).cc_epoch_sorted_reref_avg(chan,stimp,:)),'k','linewidth',2);
 
 % plot detected N1 (if detected)
-if strcmp(cfg.n1Detected, 'y')
-    h5 = plot(tt(dataBase(subj).ccep(run).ccep.n1_peak_sample(chan,stimp)),dataBase(subj).ccep(run).ccep.n1_peak_amplitude(chan,stimp),'o','MarkerFaceColor','r','MarkerEdgeColor','r','MarkerSize',4);
+h5 = plot(tt(dataBase(subj).metadata(run).ccep.n1_peak_sample(chan,stimp)),dataBase(subj).metadata(run).ccep.n1_peak_amplitude(chan,stimp),'o','MarkerFaceColor','r','MarkerEdgeColor','r','MarkerSize',4);
 
-end
 hold off
 
 % show legend
-if strcmp(cfg.reref,'y') && strcmp(cfg.n1Detected,'y')
-    legend([h1(1),h2(1),h3(1),h4(1),h5(1),h6(1)],'CI','indiv responses','average','average reref','detected ER','time window ERP')
-elseif strcmp(cfg.reref,'n') && strcmp(cfg.n1Detected,'y')
-    legend([h1(1),h2(1),h3(1),h5(1)],'CI','indiv responses','average','detected CCEP')
-elseif strcmp(cfg.reref,'y') && strcmp(cfg.n1Detected,'n')
-    legend([h1(1),h2(1),h3(1),h4(1),h6],'CI','indiv responses','average','average reref','time window ERP')
-elseif strcmp(cfg.reref,'n') && strcmp(cfg.n1Detected,'n')
-    legend([h1(1),h2(1),h3(1)],'CI','indiv responses','average')
-end
+legend([h1(1),h2(1),h3(1),h4(1),h5(1),h6(1)],'CI','indiv responses','average','average reref','detected ER','time window ERP')
 set(gca,'Fontsize',14)
 xlim([-0.2 0.4])
 ylim([-750 750])

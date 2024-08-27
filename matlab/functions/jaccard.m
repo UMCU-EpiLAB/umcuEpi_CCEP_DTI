@@ -1,4 +1,4 @@
-function [JI, JI_expected] = jaccard_SJ(SC_matrix,EC_matrix)
+function [JI, JI_expected] = jaccard(SC_matrix,EC_matrix)
 % INPUT:
 % SC_matrix = network modality one
 % EC_matrix = network modality two
