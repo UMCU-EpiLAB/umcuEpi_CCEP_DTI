@@ -85,6 +85,8 @@ for nSubj =  ecog %grid  % plot in 3 parts to get the right dimensions
 end
 saveas(T,'correlation degree grid','epsc') % save the figure for further processing with Adobe Illustrator
 
+close all
+
 count = 0;
 seeg = find(contains({dataBase(:).modality},'seeg'));
 for nSubj = seeg(1:6) %seeg part 1 %plot in 3 parts to get the right dimensions
@@ -94,6 +96,9 @@ for nSubj = seeg(1:6) %seeg part 1 %plot in 3 parts to get the right dimensions
 
 end
 saveas(T,'correlation degree seeg part 1','epsc') % save the figure for further processing with Adobe Illustrator
+
+close all
+
 
 count = 0;
 for nSubj = seeg(7:end) % seeg part 2 % plot in 3 parts to get the right dimensions
