@@ -1,6 +1,6 @@
- %STReEF04_paramModel
+%STReEF04_paramModel
 % This matlab code is developed for the manuscript 'Structural and
-% Effective brain connectivity in focal epilepsy' by Jelsma et al. 
+% Effective brain connectivity in focal epilepsy' by Jelsma et al.
 
 % author: Susanne Jelsma
 % date: October 2021
@@ -17,69 +17,92 @@ RepoPath = fileparts(rootPath);
 matlabFolder = strfind(RepoPath,'matlab');
 addpath(genpath(RepoPath(1:matlabFolder+6)));
 
-cfg.folderinput = 'shareData_STReEF'; % from which folder would you like to load ECoGs?
-myDataPath = setLocalDataPath(cfg);
+myDataPath = STReEF_setLocalDataPath(1);
 
-% housekeeping 
+% housekeeping
 clear rootPath RepoPath matlabFolder
 
 %% patient characteristics
-sub_label = input('Patient number (STREEFXX) (select multiple patients by separating each with a comma): ','s');
+sub_label = ['STREEF01, STREEF02, STREEF03, STREEF04, STREEF05, STREEF06,' ...
+    'STREEF07, STREEF08, STREEF09, STREEF10, STREEF11, STREEF12, STREEF13'];
 
 cfg.sub_label = strsplit(sub_label,{', ',','});
 
 cfg = selectPatients(cfg, myDataPath);
 
+% housekeeping
+clear sub_label
+
 %% detected and visual checked CCEP data and BIDS electrodes information (electrodes.tsv and channels.tsv)
 
-dataBase = load_network_data(myDataPath,cfg);
+dataBase = struct();
+
+for nSubj = 1:size(cfg.sub_label,2)
+
+    sub_label = ['sub-' cfg.sub_label{nSubj}];
+    ses_label = cfg.ses_label{nSubj};
+
+    fileName = [sub_label,'_',ses_label,'_Effective_Connectivity.mat'];
+    fileName2 = [sub_label,'_',ses_label,'_Structural_Connectivity.mat']; 
+    EC = load(fullfile(myDataPath.input_dev,sub_label,fileName));
+    SC = load(fullfile(myDataPath.input_dev,sub_label,fileName2));
+
+    dataBase(nSubj).sub_label = sub_label;
+    dataBase(nSubj).ses_label = ses_label;
+
+    dataBase(nSubj).ch_select = EC.ch_select;
+    dataBase(nSubj).soz_select = EC.soz_select;
+    dataBase(nSubj).EC_matrix = EC.EC_matrix;
+    dataBase(nSubj).SC_matrix = SC.SC_matrix;
+    dataBase(nSubj).x_select = EC.x_select;
+    dataBase(nSubj).y_select = EC.y_select;
+    dataBase(nSubj).z_select = EC.z_select;
+    dataBase(nSubj).VEA = SC.VEA;
+
+end
+
+% housekeeping
+clear EC fileName fileName2 nSubj SC ses_label sub_label
 
 disp('Detected data loaded')
 
 %% Network topology
 
 % calculate the network topology measures and node proximity
-for subj = 1:size(dataBase,2)
+dataBase = calculate_topology(dataBase);
 
-dataBase(subj).topology = calculate_topology(dataBase(subj).SC_matrix,dataBase(subj).EC_matrix,dataBase(subj).tb_electrodes,dataBase(subj).elec_include);
-
-end
-disp('network topology calculated')
-
+disp('Network topology calculated')
 
 %% prepare data for multilevel model calculations in R
 
-% calculate the nr of channels over all patients
+% calculate the nr of channels for all patients combined
 nr_channels =  NaN(size(dataBase,2),1);
-for subj = 1:size(dataBase,2)
-nr_channels(subj) = size(dataBase(subj).EC_matrix,1);
+for nSubj = 1:size(dataBase,2)
+    nr_channels(nSubj) = size(dataBase(nSubj).EC_matrix,1);
 end
 size_long = sum(nr_channels);
 
 % make a matrix with a row for each channel
 data_long = NaN(size_long,6); % matrix with for every channel per patient the predictors
-i=1;
-for subj = 1:size(dataBase,2)
-soz_all = strcmpi(dataBase(subj).tb_electrodes.soz,'yes'); % electrodes in soz
-soz = soz_all(dataBase(subj).elec_include); % included electrodes in soz
 
-sz = size(dataBase(subj).EC_matrix,1); % nr pf channels
+count = 1;
+for nSubj = 1:size(dataBase,2)
+    sizeSubj = size(dataBase(nSubj).EC_matrix,1); % nr pf channels
 
-data_long(i:i+sz-1,1)= subj; % patient index
-data_long(i:i+sz-1,2)= dataBase(subj).topology.degree_SC; % degree structural networks
-data_long(i:i+sz-1,3)= dataBase(subj).topology.degree_EC; % degree effective networks
-data_long(i:i+sz-1,4)= dataBase(subj).topology.node_proximity; % node proximity
-data_long(i:i+sz-1,5)= soz;  %if the channel is in the SOZ or not
-data_long(i:i+sz-1,6)= dataBase(subj).VEA; % volume of electrode contact areas
+    data_long(count:count+sizeSubj-1,1)= nSubj; % patient index
+    data_long(count:count+sizeSubj-1,2)= dataBase(nSubj).topology.degree_SC; % degree structural networks
+    data_long(count:count+sizeSubj-1,3)= dataBase(nSubj).topology.degree_EC; % degree effective networks
+    data_long(count:count+sizeSubj-1,4)= dataBase(nSubj).topology.node_proximity; % node proximity
+    data_long(count:count+sizeSubj-1,5)= dataBase(nSubj).soz_select;  %if the channel is in the SOZ or not
+    data_long(count:count+sizeSubj-1,6)= dataBase(nSubj).VEA; % volume of electrode contact areas
 
-i=i+sz;
+    count = count+sizeSubj;
 end
 
-
 names_data = {'subj' , 'SCD' , 'ECD' , 'NP' , 'SOZ' , 'VEA'};
-data_l=array2table(data_long,'VariableNames',names_data);
+tb_data_long = array2table(data_long,'VariableNames',names_data);
 
-dataPath = myDataPath.output;
-writetable(data_l,[dataPath 'input_LMM_model_new.csv']) % save the matrix with for every channel per patient the specifications
+writetable(tb_data_long,[myDataPath.output 'input_LMM_model_new.csv']) % save the matrix with for every channel per patient the specifications
 
-clear data_long data_l data_Path sz soz soz_all subj i names_data nr_channels size_long
+% housekeeping
+clear count data_long tb_data_long sizeSubj nSubj count names_data nr_channels size_long

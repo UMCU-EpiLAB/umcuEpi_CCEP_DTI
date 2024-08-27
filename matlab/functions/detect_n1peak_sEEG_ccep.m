@@ -8,8 +8,8 @@ function [dataBase] = detect_n1peak_sEEG_ccep(dataBase, cfg)
 %   [channels x stimulations x time].
 % - amplitude_thresh
 %   Threshold factor that needs to be exceeded to detect a peak as
-%   significant peak. This factor is multiplies the minimal pre simulation
-%   standard deviation. 
+%   significant peak. This factor is multiplied by the minimal 
+%   pre-stimulation standard deviation. 
 % - n1_peak_range
 %   End point (in ms) of the range in which the algorithm will search for the 
 %   peak of the N1. Algorithm will search between 10ms and the end point.
@@ -33,7 +33,8 @@ function [dataBase] = detect_n1peak_sEEG_ccep(dataBase, cfg)
 % between ERs and DRs. Algorithm is validated during the thesis and used in
 % publication (van Blooijs et al., 2018). 
 
-% This version of the algorithm is adapted for sEEG data and validated in three patients (age 10, 20 and 32)
+% This version of the algorithm is adapted for sEEG data and validated in 
+% three patients (age 10, 20 and 32).
 % Validation done by comparing the performance of the code and visual
 % assesment. Algorithm optimized by setting different parameters and
 % comparing their performances.(see master's thesis Susanne Jelsma
@@ -50,9 +51,10 @@ function [dataBase] = detect_n1peak_sEEG_ccep(dataBase, cfg)
 
 % original author: Dorien van Blooijs, UMC Utrecht, January 2018
 % modified by: Jaap van der Aar, Dora Hermes, Dorien van Blooijs, Giulio
-% Castegnaro, Susanne Jelsma UMC Utrecht, 2024
+% Castegnaro, UMC Utrecht, 2019
+% Susanne Jelsma UMC Utrecht, 2024
 
-
+%%
 amplitude_thresh = cfg.amplitude_thresh;
 n1_peak_range = cfg.n1_peak_range;
 epoch_prestim = cfg.epoch_prestim;
@@ -60,61 +62,47 @@ epoch_length = cfg.epoch_length;
 minSD = cfg.minSD;
 sel = cfg.sel;
 
-%% Script
 % iterate over all subjects in database
-for subj = 1:length(dataBase)
+for nSubj = 1:length(dataBase)
     % iterate over all their runs
-    for run = 1:size(dataBase(subj).metadata,2)
+    for nRun = 1:size(dataBase(nSubj).metadata,2)
         
-        bad_ch = find(strcmp(dataBase(subj).metadata(run).tb_channels.status,'bad'));
+        % if seeg, use only gray matter channels, hippocampus, amygdala, lesion,
+        % gliosis, and not bad as status
+        bad_ch = find(...
+            strcmp(dataBase(nSubj).metadata(nRun).tb_channels.status,'bad') | ...
+            strcmpi(dataBase(nSubj).tb_electrodes.screw,'yes') | ...
+            strcmpi(dataBase(nSubj).tb_electrodes.csf,'yes') | ...
+            (strcmpi(dataBase(nSubj).tb_electrodes.whitematter,'yes') & ...
+            strcmpi(dataBase(nSubj).tb_electrodes.graymatter,'no')))             ;
         
-        if strcmp(cfg.reref,'y')
-            signal = dataBase(subj).metadata(run).cc_epoch_sorted_reref_avg;
-        elseif strcmp(cfg.reref,'n')
-            signal = dataBase(subj).metadata(run).cc_epoch_sorted_avg;
-        end
+        signal = dataBase(nSubj).metadata(nRun).cc_epoch_sorted_reref_avg;
         
+        % pre-allocation: output in [channels X stimulations X latency amplitude]
         n1_peak = NaN(size(signal,1), ...
             size(signal,2),2); 
 
-        % if seeg, use only gray matter channels, hippocampus, amygdala, lesion,
-        % gliosis
-        if any(contains(fieldnames(dataBase(subj).tb_electrodes),'graymatter'))
-            idx_screw = strcmpi(dataBase(subj).tb_electrodes.screw,'yes');
-            idx_csf = strcmpi(dataBase(subj).tb_electrodes.csf,'yes');
-            idx_whitematter = strcmpi(dataBase(subj).tb_electrodes.whitematter,'yes') & strcmpi(dataBase(subj).tb_electrodes.graymatter,'no');
-            idx_all = sum([idx_screw, idx_csf, idx_whitematter],2);
-        
-            elec_include = cell(size(dataBase(subj).tb_electrodes,1),1);
-            [elec_include{idx_all>0}] = deal('no');
-            [elec_include{idx_all==0}] = deal('yes');
-        
-        else
-            elec_include = cell(size(dataBase(subj).tb_electrodes,1),1);
-            [elec_include{1:end}] = deal('yes');
-        end
-
         % for every averaged stimulation
-        for stimp = 1:size(dataBase(subj).metadata(run).cc_epoch_sorted_avg,2)
+        for nStimp = 1:size(dataBase(nSubj).metadata(nRun).cc_epoch_sorted_avg,2)
             % for every channel
-            for chan = 1:size(dataBase(subj).metadata(run).cc_epoch_sorted_avg,1)
-                if strcmpi(elec_include{chan},'yes') && ~ismember(chan,dataBase(subj).metadata(run).cc_stimsets(stimp,:))
+            for nChan = 1:size(dataBase(nSubj).metadata(nRun).cc_epoch_sorted_avg,1)
+                    
                     % create time struct 
-                    tt = (1:epoch_length*dataBase(subj).metadata(run).ccep_header.Fs) / ...
-                        dataBase(subj).metadata(run).ccep_header.Fs - epoch_prestim;
+                    tt = (1:epoch_length*dataBase(nSubj).metadata(nRun).ccep_header.Fs) / ...
+                        dataBase(nSubj).metadata(nRun).ccep_header.Fs - epoch_prestim;
                    
                     % baseline subtraction: take median of part of the averaged signal for
                     % this stimulation pair before stimulation, which is the half of the
                     % epoch                
                     baseline_tt = tt>-2 & tt<-.1;
-                    signal_median = median(signal(chan,stimp,baseline_tt),3,'omitnan');
+                    signal_median = median(signal(nChan,nStimp,baseline_tt),3,'omitnan');
     
                     % subtract median baseline from signal
-                    new_signal = squeeze(signal(chan,stimp,:)) - signal_median;
+                    new_signal = squeeze(signal(nChan,nStimp,:)) - signal_median;
                     % testplot new signal: plot(tt,squeeze(new_signal))
     
                     % save the corrected signal again
-                    signal(chan,stimp,:) = new_signal;
+                    signal(nChan,nStimp,:) = new_signal;
     
                     % take area before the stimulation of the new signal and calculate its SD
                     pre_stim_sd = std(new_signal(baseline_tt));
@@ -126,13 +114,12 @@ for subj = 1:length(dataBase)
                     end
     
                     % when the electrode is stimulated 
-                    if chan == dataBase(subj).metadata(run).cc_stimsets(stimp,1) || ...
-                            chan == dataBase(subj).metadata(run).cc_stimsets(stimp,2)
+                    if nChan == dataBase(nSubj).metadata(nRun).cc_stimsets(nStimp,1) || ...
+                            nChan == dataBase(nSubj).metadata(nRun).cc_stimsets(nStimp,2)
                         n1_peak_sample = NaN;
                         n1_peak_amplitude = NaN; 
        
-    
-                    elseif ismember(chan , bad_ch)
+                    elseif ismember(nChan , bad_ch) 
                         % do nothing because noisy/bad electrode
                         n1_peak_sample = NaN; 
                         n1_peak_amplitude = NaN; 
@@ -141,10 +128,6 @@ for subj = 1:length(dataBase)
     
                         % use peakfinder to find all positive and negative peaks and their
                         % amplitude.
-                        % tt are the samples of the epoch based on the Fs and -2.5 to 2.5
-                        % seconds sample of the total epoch
-                        % As tt use first sample after timepoint 0  
-                        % till first sample after 0,5 seconds (rougly 1000 samples)
                         % sel = 20 , which is how many samples around a peak not considered as another peak
                         [all_sampneg, all_amplneg] = peakfinder(new_signal(find(tt>0,1):find(tt>0.5,1)),sel,[],-1); 
                         [all_samppos, all_amplpos] = peakfinder(new_signal(find(tt>0,1):find(tt>0.5,1)),sel,[],1); 
@@ -170,7 +153,7 @@ for subj = 1:length(dataBase)
                         % stimulated electrode before this. Peak detection
                         % start 9 ms after stimulation, which is 19 samples
                         % after stimulation (with sample frequency = 2048 Hz)
-                        n1_samples_start = find(tt>(19/dataBase(subj).metadata(run).ccep_header.Fs),1);
+                        n1_samples_start = find(tt>(19/dataBase(nSubj).metadata(nRun).ccep_header.Fs),1);
                         
                         % find first sample that corresponds with the given n1
                         % peak range
@@ -206,30 +189,22 @@ for subj = 1:length(dataBase)
                     end
                   
                     % add properties to output frame 
-                    n1_peak(chan,stimp,1) = n1_peak_sample;
-                    n1_peak(chan,stimp,2) = n1_peak_amplitude;
-                else
-                    n1_peak(chan,stimp,1) = Inf; % is not important for detector performance
-                    n1_peak(chan,stimp,2) = Inf;  
-                end
+                    n1_peak(nChan,nStimp,1) = n1_peak_sample;
+                    n1_peak(nChan,nStimp,2) = n1_peak_amplitude;                
             end
         end
         
         % write n1_peak (sample and amplitude) to database
-        dataBase(subj).metadata(run).ccep.n1_peak_sample = n1_peak(:,:,1);
-        dataBase(subj).metadata(run).ccep.n1_peak_amplitude = n1_peak(:,:,2);
+        dataBase(nSubj).metadata(nRun).ccep.n1_peak_sample = n1_peak(:,:,1);
+        dataBase(nSubj).metadata(nRun).ccep.n1_peak_amplitude = n1_peak(:,:,2);
         
-        baseline corrected signal
-        if strcmp(cfg.reref,'y')
-            dataBase(subj).metadata(run).cc_epoch_sorted_reref_avg = signal;
-        elseif strcmp(cfg.reref,'n')
-            dataBase(subj).metadata(run).cc_epoch_sorted_avg = signal;
-        end
+        % baseline corrected signal
+        dataBase(nSubj).metadata(nRun).cc_epoch_sorted_reref_avg = signal;
         
-        dataBase(subj).metadata(run).ccep.amplitude_thresh = cfg.amplitude_thresh;
-        dataBase(subj).metadata(run).ccep.n1_peak_range = cfg.n1_peak_range;
-        dataBase(subj).metadata(run).ccep.minSD = cfg.minSD;
-        dataBase(subj).metadata(run).ccep.sel = cfg.sel;
+        dataBase(nSubj).metadata(nRun).ccep.amplitude_thresh = cfg.amplitude_thresh;
+        dataBase(nSubj).metadata(nRun).ccep.n1_peak_range = cfg.n1_peak_range;
+        dataBase(nSubj).metadata(nRun).ccep.minSD = cfg.minSD;
+        dataBase(nSubj).metadata(nRun).ccep.sel = cfg.sel;
 
     end
 end
