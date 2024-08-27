@@ -108,7 +108,7 @@ df$ICC[1] = RandomEffects[1,4]/(RandomEffects[1,4]+RandomEffects[2,4])
 # model with all predictors and 11 subjects degree (Degree effective networks) + Node proximity + volume(Volume electrode areas) + epi(SOZ nodes) 
 data_long_11 = subset(data_long,!(subj == 9|subj==13))
 
-model1 = lmer(formula = SCD ~ 1 + ECD + NP + VEA + SOZ +(1|subj), 
+model1 = lmer(formula = SCD ~ 1 + ECD + NP + SOZ + VEA + (1|subj), 
               data    = data_long_11) 
 summary(model1)
 model1_par = parameters::parameters(model1)
