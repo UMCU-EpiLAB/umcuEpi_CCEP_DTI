@@ -40,8 +40,8 @@ patients = c('STREEF01','STREEF02','STREEF03','STREEF04','STREEF05','STREEF06','
 for (pat in patients)
 { 
   i = i+1
-  datapath_EC = paste(dir, sprintf("sub-%s/sub-%s_ses-1_Structural_Connectivity.mat",pat,pat),sep = '')
-  datapath_SC = paste(dir, sprintf("sub-%s/sub-%s_ses-1_Effective_Connectivity.mat",pat,pat),sep = '')
+  datapath_SC = paste(dir, sprintf("sub-%s/sub-%s_ses-1_Structural_Connectivity.mat",pat,pat),sep = '')
+  datapath_EC = paste(dir, sprintf("sub-%s/sub-%s_ses-1_Effective_Connectivity.mat",pat,pat),sep = '')
   
   SC = readMat(datapath_SC) # structural network
   EC = readMat(datapath_EC) # effective network
@@ -53,10 +53,10 @@ for (pat in patients)
   test = jaccard.test.mca(SC_matrix,EC_matrix,accuracy=1e-05,verbose=TRUE) 
   infos[i,] = test} # statistical information about the Jaccard Index
 
-jaccard_statistiek = t.test(tc,alternative= 'g')
+jaccard_statistiek = t.test(infos[,1],alternative= 'g')
 
 p_adjust = p.adjust(infos[,2], method = 'fdr', n = length(score))
-
+reject = p_adjust<0.05
 
 -----------------------------------------------------------------------
   #SECTION 2: construct a linear multilevel model
