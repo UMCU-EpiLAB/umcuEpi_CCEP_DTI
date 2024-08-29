@@ -49,7 +49,7 @@ for nSubj = 1:size(dataBase,2)
     % compute the node proximity:  the node proximity per node was defined as the median distance between this node and all other nodes.
     node_proximity = NaN(size(ch,1),1);
     for nChan = 1:size(ch,1)
-        node_proximity(nChan) = median(distances(:,nChan),'omitnan');
+        node_proximity(nChan) = median(nonzeros(distances(:,nChan)),'omitnan');
     end
 
     % make a table with all the topology measures
