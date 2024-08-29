@@ -109,5 +109,21 @@ for nSubj = seeg(7:end) % seeg part 2 % plot in 3 parts to get the right dimensi
     NS = visual_topology_predictor(dataBase(nSubj).topology.node_proximity, dataBase(nSubj).topology.degree_SC, dataBase(nSubj).soz_select, count);
 
 end
-saveas(NS,'correlation np structural seeg 2','epsc') % save the figure for further processing with Adobe Illustrator
+saveas(NS,'correlation np structural seeg 2','epsc') % save the figure for further processing with Adobe Illustrator                                                                                                                                             
+
+%% FDR correction
+m = size(cfg.sub_label,2);
+PVAL = NaN(size(cfg.sub_label,2),1);
+for nSubj = 1:size(cfg.sub_label,2)
+    %  compute the p-value between the topology measure
+    [~,PVAL(nSubj)] = corr(dataBase(nSubj).topology.node_proximity, dataBase(nSubj).topology.degree_SC,'Type','Spearman'); 
+end
+[~,i] = sort(PVAL); 
+[~,j] = sort(i);
+
+p_tresh =  (j./m)*0.05;
+
+reject = p_tresh-PVAL;
+reject(reject>0)= 1;
+reject(reject<0)= 0;
 
