@@ -1,10 +1,8 @@
-function V = visual_VEA(vector_VEA, elec_info, elec_include, i)
+function V = visual_VEA(vector_VEA, soz, count)
 % INPUT:
 % vector_VEA = vector with volume of electrode contact areas (VEA)
-% elec_info = information about the electrodes (tb_electrodes in BIDS)
-% containing soz information
-% elec_include = included electrodes
-% i = place in the figure/subject
+% soz =  containing soz information
+% count= place in the figure/subject
 
 % OUTPUT:
 % T: figure with 1 subplots per patient
@@ -13,14 +11,11 @@ function V = visual_VEA(vector_VEA, elec_info, elec_include, i)
 % 
 % Make a histogram of the volume of electrode contact areas
 
-soz_all = strcmpi(elec_info.soz,'yes'); % electrodes in soz
-soz = soz_all(elec_include); % included electrodes in soz
-
 set(gcf,'renderer','Painters')
 V = figure(1);
 V.WindowState = 'maximized';
  
-subplot(2,3,i)
+subplot(2,3,count)
 histogram(vector_VEA(~soz),'BinWidth',16,'BinLimits',[0,64],'FaceColor','k','FaceAlpha',1,"LineStyle","-") % plot volume electrode contact areas
 axis square
 yt = get(gca, 'YTick');

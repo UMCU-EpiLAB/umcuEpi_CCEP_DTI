@@ -1,11 +1,9 @@
-function T = visual_topology_predictor(vector_v1, vector_v2, elec_info, elec_include, i)
+function T = visual_topology_predictor(vector_v1, vector_v2, soz, count)
 % INPUT:
 % vector_v1 = topology vector modality 1
 % vector_v2 = topology vector modality 2
-% elec_info = information about the electrodes (tb_electrodes in BIDS)
-% containing soz information
-% elec_include = included electrodes
-% i = place in the figure/subject
+% soz = topology vector soz channels
+% count = place in the figure/subject
 
 % OUTPUT:
 % T: figure with 1 subplots per patient
@@ -14,16 +12,13 @@ function T = visual_topology_predictor(vector_v1, vector_v2, elec_info, elec_inc
 % orange line: the linear fit trough the data points
 % 
 % Visualize the correlation between a topology measure from structural and effective networks
-soz_all = strcmpi(elec_info.soz,'yes'); % electrodes in soz
-soz = soz_all(elec_include); 
-
 marker = '.'; 
 
 set(gcf,'renderer','Painters')
 T = figure(1);
 T.WindowState = 'maximized';
  
-subplot(2,3,i)
+subplot(2,3,count)
 % plot the topology values outside the soz
 ns = scatter(vector_v1(~soz),vector_v2(~soz),400,'LineWidth', 1.8); 
 color = 'k'; 
@@ -72,7 +67,7 @@ end
 hold on
 color = [0.99 0.38 0.22];
 
-% plot polyfit throught data points
+% plot polyfit through data points
 plot(vector_v1,y_fit,'Color',color,'LineWidth',2.8)
 set(gca, 'FontSize',16) %12
 
