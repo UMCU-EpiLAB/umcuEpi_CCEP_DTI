@@ -81,7 +81,7 @@ for nSubj =  ecog %grid  % plot in 3 parts to get the right dimensions
 
 count = count + 1;
 % compare with degree structural connectivity
-T = visual_topology_predictor(dataBase(nSubj).topology.BC_EC, dataBase(nSubj).topology.BC_SC,dataBase(nSubj).soz_select,count);
+T = visual_topology(dataBase(nSubj).topology.BC_EC, dataBase(nSubj).topology.BC_SC,dataBase(nSubj).soz_select,count);
 
 end
 saveas(T,'correlation BC grid','epsc') % save the figure for further processing with Adobe Illustrator
@@ -94,7 +94,7 @@ for nSubj = seeg(1:6) %seeg part 1 %plot in 3 parts to get the right dimensions
 
 count= count+ 1;
 % compare with degree structural connectivity
-T = visual_topology_predictor(dataBase(nSubj).topology.BC_EC, dataBase(nSubj).topology.BC_SC, dataBase(nSubj).soz_select,count);
+T = visual_topology(dataBase(nSubj).topology.BC_EC, dataBase(nSubj).topology.BC_SC, dataBase(nSubj).soz_select,count);
 
 end
 saveas(T,'correlation BC seeg 1','epsc') % save the figure for further processing with Adobe Illustrator
@@ -106,7 +106,7 @@ for nSubj = seeg(7:end) % seeg part 2 % plot in 3 parts to get the right dimensi
 
 count= count+ 1;
 % compare with degree structural connectivity
-T = visual_topology_predictor(dataBase(nSubj).topology.BC_EC, dataBase(nSubj).topology.BC_SC, dataBase(nSubj).soz_select,count);
+T = visual_topology(dataBase(nSubj).topology.BC_EC, dataBase(nSubj).topology.BC_SC, dataBase(nSubj).soz_select,count);
 
 end
 saveas(T,'correlation BC seeg 2','epsc') % save the figure for further processing with Adobe Illustrator
@@ -116,7 +116,7 @@ m = size(cfg.sub_label,2);
 PVAL = NaN(size(cfg.sub_label,2),1);
 for nSubj = 1:size(cfg.sub_label,2)
     %  compute the p-value between the topology measure
-    [~,PVAL(nSubj)] = corr(dataBase(nSubj).topology.BC_EC, dataBase(nSubj).topology.BC_SC,'Type','Spearman'); 
+    [r(nSubj),PVAL(nSubj)] = corr(dataBase(nSubj).topology.BC_EC, dataBase(nSubj).topology.BC_SC,'Type','Spearman'); 
 end
 [~,i] = sort(PVAL); 
 [~,j] = sort(i);
