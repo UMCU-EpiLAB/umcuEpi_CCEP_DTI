@@ -1,11 +1,15 @@
- %STReEF06_figure5
+ %STReEF05_figure5
 % This matlab code is developed for the manuscript 'Structural and
 % Effective brain connectivity in focal epilepsy' by Jelsma et al. 
 
 % author: Susanne Jelsma
 % date: October 2021
 
-% % visualize results of linear mixed model (figure 5 from the manuscript) 
+% This script:
+% - set correct paths
+% - define subjects to include
+% - load linear model results (STReEF04_Rmodel.R)
+% - visualize results of linear mixed model (figure 5 from the manuscript) 
 
 %% set paths
 % set umcuEpi_CCEP_DTI/matlab in your directory and run this section
@@ -42,7 +46,7 @@ disp('llm data loaded')
 
 %% visualize results of linear mixed model
 data_lmm1 = data_lmm.lmm1_t_value(2:5); % extract the data of the predictors and not the intercept (the first row)
-data_lmm2 = [data_lmm.lmm2_t_value(2:3);data_lmm.lmm2_t_value(5);data_lmm.lmm2_t_value(4)]; % change rows so the match the predictor names
+data_lmm2 = data_lmm.lmm2_t_value(2:5); 
 data_lmm3 = data_lmm.lmm3_t_value(2:5);
 data_all = data_lmm.lmm_final_t_value(2:5);
 
@@ -54,7 +58,7 @@ f1 = figure(1);
 
 subplot(3,1,1)
 bar(data_lmm1,'w')
-set(gca, 'XTickLabel',[{'DEC'} {'NP'} {'VEA'} {'SOZ'}])
+set(gca, 'XTickLabel',[{'ECD'} {'NP'} {'SOZ'} {'VEA'}])
 ylim([-4,4])
 set(gca, 'FontSize',12) 
 yline(stat_tresh, Color=color,LineWidth=1.5)
@@ -63,7 +67,7 @@ ylabel('T-value')
 
 subplot(3,1,2)
 bar(data_lmm2,'w')
-set(gca, 'XTickLabel',[{'DEC'} {'NP'} {'VEA'} {'SOZ'}])
+set(gca, 'XTickLabel',[{'ECD'} {'NP'} {'SOZ'} {'VEA'}])
 ylim([-4,4])
 set(gca, 'FontSize',12) 
 yline(stat_tresh, Color=color,LineWidth=1.5)
@@ -72,7 +76,7 @@ ylabel('T-value')
 
 subplot(3,1,3)
 bar(data_lmm3,'w')
-set(gca, 'XTickLabel',[{'DEC'} {'NP'} {'VEA'} {'SOZ'}])
+set(gca, 'XTickLabel',[{'ECD'} {'NP'} {'SOZ'} {'VEA'}])
 ylim([-4,4])
 set(gca, 'FontSize',12) 
 yline(stat_tresh, Color=color,LineWidth=1.5)
@@ -83,14 +87,20 @@ f2 = figure(2);
 
 subplot(3,1,1)
 bar(data_all,'w')
-set(gca, 'XTickLabel',[{'DEC'} {'NP'} {'VEA'} {'SOZ'}])
+set(gca, 'XTickLabel',[{'ECD'} {'NP'} {'SOZ'} {'VEA'}])
 ylim([-4,4])
 set(gca, 'FontSize',12) 
 yline(stat_tresh, Color=color,LineWidth=1.5)
 yline(-stat_tresh, Color=color,LineWidth=1.5)
 ylabel('T-value')
 
-saveas(f1,'lmm_figure5a','epsc') % save the figure for further processing with Adobe Illustrator
-saveas(f2,'lmm_figure5b','epsc') % save the figure for further processing with Adobe Illustrator
+% Create the folder if it doesn't exist already.
+targetFolder = fullfile(myDataPath.output,'/Figures/');
+if ~exist(targetFolder, 'dir')
+    mkdir(targetFolder);
+end
+
+saveas(f1,fullfile(targetFolder,'lmm_figure5a'),'epsc') % save the figure for further processing with Adobe Illustrator
+saveas(f2,fullfile(targetFolder,'lmm_figure5b'),'epsc') % save the figure for further processing with Adobe Illustrator
 clear color data_all data_lmm1 data_lmm2 data_lmm3 f1 f2 stat_tresh 
 

@@ -5,7 +5,13 @@
 % author: Susanne Jelsma
 % date: October 2021
 
-% % visualize the network topology for all patients node proximity vs structural (figures S1 manuscript)
+% This script:
+% - set correct paths
+% - define subjects to include
+% - load preprocessed structural and effective matrices (STReEF02_postprocessEC.m)
+% - calculate network topology measures
+% - visualize the network topology for all patients node proximity vs structural (figures S1 manuscript)
+
 %% set paths
 % set umcuEpi_CCEP_DTI/matlab in your directory and run this section
 
@@ -17,62 +23,119 @@ RepoPath = fileparts(rootPath);
 matlabFolder = strfind(RepoPath,'matlab');
 addpath(genpath(RepoPath(1:matlabFolder+6)));
 
-cfg.folderinput = 'shareData_STReEF'; % from which folder would you like to load ECoGs?
-myDataPath = setLocalDataPath(cfg);
+myDataPath = STReEF_setLocalDataPath(1);
 
-% housekeeping 
+% housekeeping
 clear rootPath RepoPath matlabFolder
 
 %% patient characteristics
-sub_label = input('Patient number (STREEFXX) (select multiple patients by separating each with a comma): ','s');
+sub_label = ['STREEF01, STREEF02, STREEF03, STREEF04, STREEF05, STREEF06,' ...
+    'STREEF07, STREEF08, STREEF09, STREEF10, STREEF11, STREEF12, STREEF13'];
 
 cfg.sub_label = strsplit(sub_label,{', ',','});
 
 cfg = selectPatients(cfg, myDataPath);
 
-%% load detected and visual checked CCEP data and BIDS electrodes information (electrodes.tsv)
+% housekeeping
+clear sub_label
 
-dataBase = load_network_data(myDataPath,cfg);
+%% structural and effective connectivity
 
-disp('Detected data loaded')
+dataBase = struct();
 
-%%  calculate the network topology measures and node proximity
+for nSubj = 1:size(cfg.sub_label,2)
 
-for subj = 1:size(dataBase,2)
+    sub_label = ['sub-' cfg.sub_label{nSubj}];
+    ses_label = cfg.ses_label{nSubj};
 
-dataBase(subj).topology = calculate_topology(dataBase(subj).SC_matrix,dataBase(subj).EC_matrix,dataBase(subj).tb_electrodes,dataBase(subj).elec_include);
+    fileName = [sub_label,'_',ses_label,'_Effective_Connectivity.mat'];
+    fileName2 = [sub_label,'_',ses_label,'_Structural_Connectivity.mat'];
+    EC = load(fullfile(myDataPath.input_dev,sub_label,fileName));
+    SC = load(fullfile(myDataPath.input_dev,sub_label,fileName2));
+
+    dataBase(nSubj).sub_label = sub_label;
+    dataBase(nSubj).ses_label = ses_label;
+
+    dataBase(nSubj).ch_select = EC.ch_select;
+    dataBase(nSubj).soz_select = EC.soz_select;
+    dataBase(nSubj).modality = EC.modality;
+    dataBase(nSubj).EC_matrix = EC.EC_matrix;
+    dataBase(nSubj).SC_matrix = SC.SC_matrix;
+    dataBase(nSubj).x_select = EC.x_select;
+    dataBase(nSubj).y_select = EC.y_select;
+    dataBase(nSubj).z_select = EC.z_select;
+    dataBase(nSubj).VEA = SC.VEA;
 
 end
-disp('network topology calculated')
+
+% housekeeping
+clear EC fileName fileName2 nSubj SC ses_label sub_label
+
+disp('Data loaded')
+
+%%  calculate the network topology measures
+
+dataBase = calculate_topology(dataBase);
+
+disp('Network topology calculated')
 
 %%  visualize the network topology for all patients node proximity vs structural (figures S1 manuscript)
 
-i = 0;
-for subj = 1:5 % grid  % plot in 3 parts to get the right dimensions
+% Create the folder if it doesn't exist already.
+targetFolder = fullfile(myDataPath.output,'/Figures/');
+if ~exist(targetFolder, 'dir')
+    mkdir(targetFolder);
+end
 
-i = i + 1;
+count = 0;
+ecog = find(contains({dataBase(:).modality},'ecog'));
+for nSubj =  ecog %grid  % plot in 3 parts to get the right dimensions
+
+count = count + 1;
 % compare with degree structural connectivity
-NS = visual_topology_predictor(dataBase(subj).topology.node_proximity, dataBase(subj).topology.degree_SC, dataBase(subj).tb_electrodes,dataBase(subj).elec_include, i);
+NS = visual_topology_predictor(dataBase(nSubj).topology.node_proximity, dataBase(nSubj).topology.degree_SC, dataBase(nSubj).soz_select,count);
 
 end
-saveas(NS,'correlation np structural grid','epsc') % save the figure for further processing with Adobe Illustrator
+saveas(NS,fullfile(targetFolder,'correlation np structural grid'),'epsc') % save the figure for further processing with Adobe Illustrator
 
-i = 0;
-for subj = 6:11 %eeg part 1 % plot in 3 parts to get the right dimensions
 
-i = i + 1;
-% compare with degree structural connectivity
-NS = visual_topology_predictor(dataBase(subj).topology.node_proximity, dataBase(subj).topology.degree_SC, dataBase(subj).tb_electrodes,dataBase(subj).elec_include, i);
+close all
 
-end
-saveas(NS,'correlation np structural seeg 1','epsc') % save the figure for further processing with Adobe Illustrator
+count = 0;
+seeg = find(contains({dataBase(:).modality},'seeg'));
+for nSubj = seeg(1:6) %seeg part 1 %plot in 3 parts to get the right dimensions
 
-i = 0;
-for subj = 12:13 % seeg part 2 % plot in 3 parts to get the right dimensions
-
-i = i + 1;
-% compare with degree structural connectivity
-NS = visual_topology_predictor(dataBase(subj).topology.node_proximity, dataBase(subj).topology.degree_SC, dataBase(subj).tb_electrodes,dataBase(subj).elec_include, i);
+    count = count + 1;
+    NS = visual_topology_predictor(dataBase(nSubj).topology.node_proximity, dataBase(nSubj).topology.degree_SC, dataBase(nSubj).soz_select, count);
 
 end
-saveas(NS,'correlation np structural seeg 2','epsc') % save the figure for further processing with Adobe Illustrator
+saveas(NS,fullfile(targetFolder,'correlation np structural seeg 1'),'epsc') % save the figure for further processing with Adobe Illustrator
+
+close all
+
+
+count = 0;
+for nSubj = seeg(7:end) % seeg part 2 % plot in 3 parts to get the right dimensions
+
+    count = count + 1;
+    NS = visual_topology_predictor(dataBase(nSubj).topology.node_proximity, dataBase(nSubj).topology.degree_SC, dataBase(nSubj).soz_select, count);
+
+end
+saveas(NS,fullfile(targetFolder,'correlation np structural seeg 2'),'epsc') % save the figure for further processing with Adobe Illustrator                                                                                                                                             
+
+%% FDR correction
+m = size(cfg.sub_label,2);
+PVAL = NaN(size(cfg.sub_label,2),1);
+
+for nSubj = 1:size(cfg.sub_label,2)
+    %  compute the p-value between the topology measure
+    [~,PVAL(nSubj)] = corr(dataBase(nSubj).topology.node_proximity, dataBase(nSubj).topology.degree_SC,'Type','Spearman');
+end
+[~,I] = sort(PVAL); 
+[~,IJ] = sort(I);
+
+pFDR =  (IJ./m)*0.05;
+
+FDRkeep = pFDR-PVAL;
+FDRkeep(FDRkeep>0)= 1;
+FDRkeep(FDRkeep<0)= 0;

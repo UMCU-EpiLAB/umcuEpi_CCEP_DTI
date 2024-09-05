@@ -1,4 +1,4 @@
- %STReEF03_postprocessEC
+ %STReEF02_postprocessEC
 % This matlab code is developed for the manuscript 'Structural and
 % Effective brain connectivity in focal epilepsy' by Jelsma et al. 
 
@@ -6,11 +6,12 @@
 % date: October 2021
 
 % This script is used to:
-% 1. load detected and visual checked CCEP data
-% 2. merge the BIDS runs
-% 3. include electrodes
-% 4. make a symmetric bi-directional effective connectivity network
-% 5. save 
+% - set correct paths
+% - define subjects to include
+% - load detected and visual checked CCEP data
+% - merge multiple SPES-runs
+% - make a symmetric bi-directional effective connectivity network
+% - save matrix in derivatives
 
 %% set paths
 % set umcuEpi_CCEP_DTI/matlab in your directory and run this section

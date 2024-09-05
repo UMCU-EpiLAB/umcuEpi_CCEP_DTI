@@ -40,8 +40,8 @@ patients = c('STREEF01','STREEF02','STREEF03','STREEF04','STREEF05','STREEF06','
 for (pat in patients)
 { 
   i = i+1
-  datapath_EC = paste(dir, sprintf("sub-%s/sub-%s_ses-1_Structural_Connectivity.mat",pat,pat),sep = '')
-  datapath_SC = paste(dir, sprintf("sub-%s/sub-%s_ses-1_Effective_Connectivity.mat",pat,pat),sep = '')
+  datapath_SC = paste(dir, sprintf("sub-%s/sub-%s_ses-1_Structural_Connectivity.mat",pat,pat),sep = '')
+  datapath_EC = paste(dir, sprintf("sub-%s/sub-%s_ses-1_Effective_Connectivity.mat",pat,pat),sep = '')
   
   SC = readMat(datapath_SC) # structural network
   EC = readMat(datapath_EC) # effective network
@@ -53,10 +53,10 @@ for (pat in patients)
   test = jaccard.test.mca(SC_matrix,EC_matrix,accuracy=1e-05,verbose=TRUE) 
   infos[i,] = test} # statistical information about the Jaccard Index
 
-jaccard_statistiek = t.test(tc,alternative= 'g')
+jaccard_statistiek = t.test(infos[,1],alternative= 'g')
 
 p_adjust = p.adjust(infos[,2], method = 'fdr', n = length(score))
-
+reject = p_adjust<0.05
 
 -----------------------------------------------------------------------
   #SECTION 2: construct a linear multilevel model
@@ -108,7 +108,7 @@ df$ICC[1] = RandomEffects[1,4]/(RandomEffects[1,4]+RandomEffects[2,4])
 # model with all predictors and 11 subjects degree (Degree effective networks) + Node proximity + volume(Volume electrode areas) + epi(SOZ nodes) 
 data_long_11 = subset(data_long,!(subj == 9|subj==13))
 
-model1 = lmer(formula = SCD ~ 1 + ECD + NP + VEA + SOZ +(1|subj), 
+model1 = lmer(formula = SCD ~ 1 + ECD + NP + SOZ + VEA + (1|subj), 
               data    = data_long_11) 
 summary(model1)
 model1_par = parameters::parameters(model1)
