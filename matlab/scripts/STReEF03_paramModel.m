@@ -1,11 +1,19 @@
-%STReEF04_paramModel
+%STReEF03_paramModel
+
 % This matlab code is developed for the manuscript 'Structural and
 % Effective brain connectivity in focal epilepsy' by Jelsma et al.
 
 % author: Susanne Jelsma
 % date: October 2021
 
-%  prepare data for multilevel model calculations in R
+% This script:
+% - set correct paths
+% - define subjects to include
+% - load preprocessed CCEP data (STReEF01_preprocessCCEP.m)
+% - determine network topology
+% - prepare data for multilevel model calculations in R
+% - save as csv-file
+
 %% set paths
 % set umcuEpi_CCEP_DTI/matlab in your directory and run this section
 

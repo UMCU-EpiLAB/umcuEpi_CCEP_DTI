@@ -5,7 +5,13 @@
 % author: Susanne Jelsma
 % date: October 2021
 
+% This script:
+% - set correct paths
+% - define subjects to include
+% - load preprocessed structural and effective matrices (STReEF02_postprocessEC.m)
+% - calculate network topology
 % % visualize the network topology for all patients volume of electrode contact areas (VEA) (figure S4 in manuscript)
+
 %% set paths
 % set umcuEpi_CCEP_DTI/matlab in your directory and run this section
 
@@ -75,6 +81,12 @@ disp('Network topology calculated')
 
 %% %  visualize the network topology for all patients volume of electrode contact areas (VEA) (figure S4 in manuscript)
 
+% Create the folder if it doesn't exist already.
+targetFolder = fullfile(myDataPath.output,'/Figures/');
+if ~exist(targetFolder, 'dir')
+    mkdir(targetFolder);
+end
+
 count = 0;
 ecog = find(contains({dataBase(:).modality},'ecog'));
 for nSubj =  ecog %grid  % plot in 3 parts to get the right dimensions
@@ -84,7 +96,7 @@ count = count + 1;
 VS = visual_topology_predictor(dataBase(nSubj).VEA, dataBase(nSubj).topology.degree_SC,dataBase(nSubj).soz_select,count);
 
 end
-saveas(VS,'correlation VEA structural grid','epsc') % save the figure for further processing with Adobe Illustrator
+saveas(VS,fullfile(targetFolder,'correlation VEA structural grid'),'epsc') % save the figure for further processing with Adobe Illustrator
 
 close all 
 
@@ -97,7 +109,7 @@ count= count+ 1;
 VS = visual_topology_predictor(dataBase(nSubj).VEA, dataBase(nSubj).topology.degree_SC, dataBase(nSubj).soz_select,count);
 
 end
-saveas(VS,'correlation VEA structural seeg 1','epsc') % save the figure for further processing with Adobe Illustrator
+saveas(VS,fullfile(targetFolder,'correlation VEA structural seeg 1'),'epsc') % save the figure for further processing with Adobe Illustrator
 
 close all
 
@@ -109,20 +121,21 @@ count= count+ 1;
 VS = visual_topology_predictor(dataBase(nSubj).VEA, dataBase(nSubj).topology.degree_SC, dataBase(nSubj).soz_select,count);
 
 end
-saveas(VS,'correlation VEA structural seeg 2','epsc') % save the figure for further processing with Adobe Illustrator
+saveas(VS,fullfile(targetFolder,'correlation VEA structural seeg 2'),'epsc') % save the figure for further processing with Adobe Illustrator
 
 %% FDR correction
 m = size(cfg.sub_label,2);
 PVAL = NaN(size(cfg.sub_label,2),1);
+
 for nSubj = 1:size(cfg.sub_label,2)
     %  compute the p-value between the topology measure
-    [~,PVAL(nSubj)] = corr(dataBase(nSubj).VEA, dataBase(nSubj).topology.degree_SC,'Type','Spearman'); 
+    [~,PVAL(nSubj)] = corr(dataBase(nSubj).VEA, dataBase(nSubj).topology.degree_SC,'Type','Spearman');
 end
-[~,i] = sort(PVAL); 
-[~,j] = sort(i);
+[~,I] = sort(PVAL); 
+[~,IJ] = sort(I);
 
-p_tresh =  (j./m)*0.05;
+pFDR =  (IJ./m)*0.05;
 
-reject = p_tresh-PVAL;
-reject(reject>0)= 1;
-reject(reject<0)= 0;
+FDRkeep = pFDR-PVAL;
+FDRkeep(FDRkeep>0)= 1;
+FDRkeep(FDRkeep<0)= 0;

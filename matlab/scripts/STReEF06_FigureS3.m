@@ -5,9 +5,15 @@
 % author: Susanne Jelsma
 % date: October 2021
 
-% % make histogram of the volume of electrode contact areas (figure S3 manuscript)
-% set umcuEpi_CCEP_DTI/matlab in your directory and run this section
+% This script:
+% - set correct paths
+% - define subjects to include
+% - load preprocessed structural and effective matrices (STReEF02_postprocessEC.m)
+% - make histogram of the volume of electrode contact areas (figure S3 manuscript)
+
 %% set paths
+% set umcuEpi_CCEP_DTI/matlab in your directory and run this section
+
 clc
 clear
 
@@ -68,6 +74,12 @@ disp('Data loaded')
 
 %% Histogram of the volume of electrode contact areas (figure S3 manuscript)
 
+% Create the folder if it doesn't exist already.
+targetFolder = fullfile(myDataPath.output,'/Figures/');
+if ~exist(targetFolder, 'dir')
+    mkdir(targetFolder);
+end
+
 count = 0;
 ecog = find(contains({dataBase(:).modality},'ecog'));
 for nSubj =  ecog %grid  % plot in 3 parts to get the right dimensions
@@ -76,8 +88,7 @@ count = count + 1;
 VEA = visual_VEA(dataBase(nSubj).VEA, dataBase(nSubj).soz_select, count);
 
 end
-saveas(VEA,'histogram VEA grid','epsc') % save the figure for further processing with Adobe Illustrator
-
+saveas(VEA,fullfile(targetFolder,'histogram VEA grid'),'epsc') % save the figure for further processing with Adobe Illustrator
 
 close all
 
@@ -89,7 +100,7 @@ count = count + 1;
 VEA = visual_VEA(dataBase(nSubj).VEA, dataBase(nSubj).soz_select, count);
 
 end
-saveas(VEA,'histogram VEA seeg 1','epsc') % save the figure for further processing with Adobe Illustrator
+saveas(VEA,fullfile(targetFolder,'histogram VEA seeg 1'),'epsc') % save the figure for further processing with Adobe Illustrator
 
 close all
 
@@ -100,4 +111,4 @@ count = count + 1;
 VEA = visual_VEA(dataBase(nSubj).VEA, dataBase(nSubj).soz_select, count);
 
 end
-saveas(VEA,'histogram VEA seeg 2','epsc') % save the figure for further processing with Adobe Illustrator
+saveas(VEA,fullfile(targetFolder,'histogram VEA seeg 2'),'epsc') % save the figure for further processing with Adobe Illustrator

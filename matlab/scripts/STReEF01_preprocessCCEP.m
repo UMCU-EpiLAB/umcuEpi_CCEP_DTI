@@ -1,13 +1,19 @@
 % STReEF01_preprocessCCEP
 % This matlab code is developed for the manuscript 'Structural and
 % Effective brain connectivity in focal epilepsy' by Jelsma et al. 
-% detect CCEPs in either cECoG or sEEG data
 
 % author: Dorien van Blooijs & Susanne Jelsma
 % date: October 2021
 
-% load ECoG data, split into stimulation trials, re-reference the data,
-% detect CCEPs
+% This script:
+% - set correct paths
+% - define subjects to include
+% - load ECoG data
+% - split into stimulation trials, 
+% - re-reference the data,
+% - detect CCEPs
+% - visually check the detected CCEPs
+% - save pre-processed data in derivatives for further analyses
 
 %% set paths
 % set umcuEpi_CCEP_DTI/matlab in your directory and run this section

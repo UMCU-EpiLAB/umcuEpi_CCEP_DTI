@@ -1,11 +1,17 @@
-%STReEF06_figure2
+%STReEF05_figure3
 % This matlab code is developed for the manuscript 'Structural and
 % Effective brain connectivity in focal epilepsy' by Jelsma et al.
 
 % author: Susanne Jelsma
 % date: October 2021
 
-% % visualize the inter_modal similarity (figure 2 from the manuscript)
+% This script:
+% - set correct paths
+% - define subjects to include
+% - load preprocessed structural and effective matrices (STReEF02_postprocessEC.m)
+% - calculate Jaccard index
+% - visualize the inter_modal similarity with connectivity matrices (figure 3 from the manuscript)
+
 %% set paths
 % set umcuEpi_CCEP_DTI/matlab in your directory and run this section
 
@@ -33,7 +39,7 @@ cfg = selectPatients(cfg, myDataPath);
 % housekeeping
 clear sub_label
 
-%% detected and visual checked CCEP data and BIDS electrodes information (electrodes.tsv)
+%% load structural and effective connectivity
 
 dataBase = struct();
 
@@ -50,10 +56,10 @@ for nSubj = 1:size(cfg.sub_label,2)
     dataBase(nSubj).sub_label = sub_label;
     dataBase(nSubj).ses_label = ses_label;
 
-    dataBase(nSubj).modality = EC.modality;
+    dataBase(nSubj).ch_select = EC.ch_select;
     dataBase(nSubj).EC_matrix = EC.EC_matrix;
     dataBase(nSubj).SC_matrix = SC.SC_matrix;
-    
+
 end
 
 % housekeeping
@@ -61,11 +67,8 @@ clear EC fileName fileName2 nSubj SC ses_label sub_label
 
 disp('Data loaded')
 
-%% Calculate the inter-modal similarity
-
-% calculate the Jaccard Index
+%% calculate the Jaccard Index
 JI = zeros(size(dataBase,2,1)); JI_expected = zeros(size(dataBase,2,1));
-
 for nSubj = 1:size(dataBase,2)
 
     [JI(nSubj), JI_expected(nSubj)] = jaccard(dataBase(nSubj).SC_matrix,dataBase(nSubj).EC_matrix);
@@ -75,20 +78,23 @@ end
 % housekeeping
 clear nSubj
 
-% Calculate the ratio between structural and effective connections in the set of symmetric difference connections
-ratio = zeros(size(dataBase,2,1));
-for nSubj = 1:size(dataBase,2)
+disp('Jaccard Index calculated')
 
-    ratio(nSubj) = ratio_SC_EC(dataBase(nSubj).SC_matrix,dataBase(nSubj).EC_matrix);
+%% visualize the inter-modal similarity with connectivity matrices (figure 3 from the manuscript)
+
+% Create the folder if it doesn't exist already.
+targetFolder = fullfile(myDataPath.output,'/Figures/');
+if ~exist(targetFolder, 'dir')
+    mkdir(targetFolder);
+end
+
+for nSubj = [5,4]
+
+    V = visual_networks(dataBase(nSubj).SC_matrix,dataBase(nSubj).EC_matrix,dataBase(nSubj).sub_label); % function to plot the connectivity matrices
+    V.WindowState = 'maximized';
+    saveas(V,fullfile(targetFolder,sprintf('visual_networks%s',dataBase(nSubj).sub_label)),'epsc') % save the figure for further processing with Adobe Illustrator
 
 end
 
-disp('Inter-modal similarity calculated')
-
-%% visualize the inter_modal similarity (figure 2 from the manuscript)
-
-[R,J] = intermodal_similarity(JI, JI_expected, ratio, {dataBase.modality});
-saveas(R,'ratio','epsc') % save the figure for further processing with Adobe Illustrator
-saveas(J,'Jaccard Index','epsc') % save the figure for further processing with Adobe Illustrator
-
-clear ratio nSubj JI JI_expected R J
+% housekeeping
+clear nSubj V

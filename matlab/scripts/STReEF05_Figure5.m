@@ -1,11 +1,15 @@
- %STReEF06_figure5
+ %STReEF05_figure5
 % This matlab code is developed for the manuscript 'Structural and
 % Effective brain connectivity in focal epilepsy' by Jelsma et al. 
 
 % author: Susanne Jelsma
 % date: October 2021
 
-% % visualize results of linear mixed model (figure 5 from the manuscript) 
+% This script:
+% - set correct paths
+% - define subjects to include
+% - load linear model results (STReEF04_Rmodel.R)
+% - visualize results of linear mixed model (figure 5 from the manuscript) 
 
 %% set paths
 % set umcuEpi_CCEP_DTI/matlab in your directory and run this section
@@ -90,7 +94,13 @@ yline(stat_tresh, Color=color,LineWidth=1.5)
 yline(-stat_tresh, Color=color,LineWidth=1.5)
 ylabel('T-value')
 
-saveas(f1,'lmm_figure5a','epsc') % save the figure for further processing with Adobe Illustrator
-saveas(f2,'lmm_figure5b','epsc') % save the figure for further processing with Adobe Illustrator
+% Create the folder if it doesn't exist already.
+targetFolder = fullfile(myDataPath.output,'/Figures/');
+if ~exist(targetFolder, 'dir')
+    mkdir(targetFolder);
+end
+
+saveas(f1,fullfile(targetFolder,'lmm_figure5a'),'epsc') % save the figure for further processing with Adobe Illustrator
+saveas(f2,fullfile(targetFolder,'lmm_figure5b'),'epsc') % save the figure for further processing with Adobe Illustrator
 clear color data_all data_lmm1 data_lmm2 data_lmm3 f1 f2 stat_tresh 
 

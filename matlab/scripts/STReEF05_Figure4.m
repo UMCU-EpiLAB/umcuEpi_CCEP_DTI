@@ -1,11 +1,17 @@
-%STReEF06_figure4
+%STReEF05_figure4
 % This matlab code is developed for the manuscript 'Structural and
 % Effective brain connectivity in focal epilepsy' by Jelsma et al.
 
 % author: Susanne Jelsma
 % date: October 2021
 
-% % visualize the network topology for all patients degree (figure 4 manuscript)
+% This script:
+% - set correct paths
+% - define subjects to include
+% - load preprocessed structural and effective matrices (STReEF02_postprocessEC.m)
+% - calculate network topology
+% - visualize the network topology for all patients degree (figure 4 manuscript)
+
 %% set paths
 % set umcuEpi_CCEP_DTI/matlab in your directory and run this section
 
@@ -75,54 +81,59 @@ disp('Network topology calculated')
 
 %%  visualize the network topology for all patients degree
 
-count = 0;
+% Create the folder if it doesn't exist already.
+targetFolder = fullfile(myDataPath.output,'/Figures/');
+if ~exist(targetFolder, 'dir')
+    mkdir(targetFolder);
+end
+
+count = 1;
 ecog = find(contains({dataBase(:).modality},'ecog'));
 for nSubj =  ecog %grid  % plot in 3 parts to get the right dimensions
 
-    count = count + 1;
     T = visual_topology(dataBase(nSubj).topology.degree_EC, dataBase(nSubj).topology.degree_SC, dataBase(nSubj).soz_select, count);
+    count = count + 1;
 
 end
-saveas(T,'correlation degree grid','epsc') % save the figure for further processing with Adobe Illustrator
+saveas(T,fullfile(targetFolder,'correlation degree grid'),'epsc') % save the figure for further processing with Adobe Illustrator
 
 close all
 
-count = 0;
+count = 1;
 seeg = find(contains({dataBase(:).modality},'seeg'));
 for nSubj = seeg(1:6) %seeg part 1 %plot in 3 parts to get the right dimensions
 
-    count = count + 1;
     T = visual_topology(dataBase(nSubj).topology.degree_EC, dataBase(nSubj).topology.degree_SC, dataBase(nSubj).soz_select, count);
+    count = count + 1;
 
 end
-saveas(T,'correlation degree seeg part 1','epsc') % save the figure for further processing with Adobe Illustrator
+saveas(T,fullfile(targetFolder,'correlation degree seeg part 1'),'epsc') % save the figure for further processing with Adobe Illustrator
 
 close all
 
 
-count = 0;
+count = 1;
 for nSubj = seeg(7:end) % seeg part 2 % plot in 3 parts to get the right dimensions
 
-    count = count + 1;
     T = visual_topology(dataBase(nSubj).topology.degree_EC, dataBase(nSubj).topology.degree_SC, dataBase(nSubj).soz_select, count);
+    count = count + 1;
 
 end
-saveas(T,'correlation degree seeg part 2','epsc') % save the figure for further processing with Adobe Illustrator
+saveas(T,fullfile(targetFolder,'correlation degree seeg part 2'),'epsc') % save the figure for further processing with Adobe Illustrator
 
 %% FDR correction
 m = size(cfg.sub_label,2);
 PVAL = NaN(size(cfg.sub_label,2),1);
+
 for nSubj = 1:size(cfg.sub_label,2)
     %  compute the p-value between the topology measure
     [~,PVAL(nSubj)] = corr(dataBase(nSubj).topology.degree_EC, dataBase(nSubj).topology.degree_SC,'Type','Spearman'); 
 end
-[~,i] = sort(PVAL); 
-[~,j] = sort(i);
+[~,I] = sort(PVAL); 
+[~,IJ] = sort(I);
 
-p_tresh =  (j./m)*0.05;
+pFDR =  (IJ./m)*0.05;
 
-reject = p_tresh-PVAL;
-reject(reject>0)= 1;
-reject(reject<0)= 0;
-
-
+FDRkeep = pFDR-PVAL;
+FDRkeep(FDRkeep>0)= 1;
+FDRkeep(FDRkeep<0)= 0;

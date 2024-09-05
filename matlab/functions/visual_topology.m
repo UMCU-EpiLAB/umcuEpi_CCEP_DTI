@@ -3,7 +3,7 @@ function T = visual_topology(vector_v1, vector_v2, soz, count)
 % vector_v1 = topology vector modality 1
 % vector_v2 = topology vector modality 2
 % soz = topology vector soz channels
-% count = place in the figure/subject
+% count = location in the figure/subject
 
 % OUTPUT:
 % T: figure with 1 subplots per patient

@@ -5,7 +5,13 @@
 % author: Susanne Jelsma
 % date: October 2021
 
-% % visualize the network topology for all patients node proximity vs structural (figures S1 manuscript)
+% This script:
+% - set correct paths
+% - define subjects to include
+% - load preprocessed structural and effective matrices (STReEF02_postprocessEC.m)
+% - calculate network topology measures
+% - visualize the network topology for all patients node proximity vs structural (figures S1 manuscript)
+
 %% set paths
 % set umcuEpi_CCEP_DTI/matlab in your directory and run this section
 
@@ -75,6 +81,12 @@ disp('Network topology calculated')
 
 %%  visualize the network topology for all patients node proximity vs structural (figures S1 manuscript)
 
+% Create the folder if it doesn't exist already.
+targetFolder = fullfile(myDataPath.output,'/Figures/');
+if ~exist(targetFolder, 'dir')
+    mkdir(targetFolder);
+end
+
 count = 0;
 ecog = find(contains({dataBase(:).modality},'ecog'));
 for nSubj =  ecog %grid  % plot in 3 parts to get the right dimensions
@@ -84,7 +96,7 @@ count = count + 1;
 NS = visual_topology_predictor(dataBase(nSubj).topology.node_proximity, dataBase(nSubj).topology.degree_SC, dataBase(nSubj).soz_select,count);
 
 end
-saveas(NS,'correlation np structural grid','epsc') % save the figure for further processing with Adobe Illustrator
+saveas(NS,fullfile(targetFolder,'correlation np structural grid'),'epsc') % save the figure for further processing with Adobe Illustrator
 
 
 close all
@@ -97,7 +109,7 @@ for nSubj = seeg(1:6) %seeg part 1 %plot in 3 parts to get the right dimensions
     NS = visual_topology_predictor(dataBase(nSubj).topology.node_proximity, dataBase(nSubj).topology.degree_SC, dataBase(nSubj).soz_select, count);
 
 end
-saveas(NS,'correlation np structural seeg 1','epsc') % save the figure for further processing with Adobe Illustrator
+saveas(NS,fullfile(targetFolder,'correlation np structural seeg 1'),'epsc') % save the figure for further processing with Adobe Illustrator
 
 close all
 
@@ -109,21 +121,21 @@ for nSubj = seeg(7:end) % seeg part 2 % plot in 3 parts to get the right dimensi
     NS = visual_topology_predictor(dataBase(nSubj).topology.node_proximity, dataBase(nSubj).topology.degree_SC, dataBase(nSubj).soz_select, count);
 
 end
-saveas(NS,'correlation np structural seeg 2','epsc') % save the figure for further processing with Adobe Illustrator                                                                                                                                             
+saveas(NS,fullfile(targetFolder,'correlation np structural seeg 2'),'epsc') % save the figure for further processing with Adobe Illustrator                                                                                                                                             
 
 %% FDR correction
 m = size(cfg.sub_label,2);
 PVAL = NaN(size(cfg.sub_label,2),1);
+
 for nSubj = 1:size(cfg.sub_label,2)
     %  compute the p-value between the topology measure
-    [~,PVAL(nSubj)] = corr(dataBase(nSubj).topology.node_proximity, dataBase(nSubj).topology.degree_SC,'Type','Spearman'); 
+    [~,PVAL(nSubj)] = corr(dataBase(nSubj).topology.node_proximity, dataBase(nSubj).topology.degree_SC,'Type','Spearman');
 end
-[~,i] = sort(PVAL); 
-[~,j] = sort(i);
+[~,I] = sort(PVAL); 
+[~,IJ] = sort(I);
 
-p_tresh =  (j./m)*0.05;
+pFDR =  (IJ./m)*0.05;
 
-reject = p_tresh-PVAL;
-reject(reject>0)= 1;
-reject(reject<0)= 0;
-
+FDRkeep = pFDR-PVAL;
+FDRkeep(FDRkeep>0)= 1;
+FDRkeep(FDRkeep<0)= 0;
